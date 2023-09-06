@@ -1,30 +1,35 @@
-package gowi
+package main
 
-import "errors"
+import (
+	"fmt"
+	"gowi/gowi"
+)
 
-type Cache struct {
-	data   map[string]interface{}
-	length int
+func main() {
+	c := gowi.NewCache()
+	// c.Set("name", 213)
+
+	// c.Del("name")
+
+	c.Hset("metadata", "age", 19)
+	c.Hset("metadata", "name", "leo")
+	c.Hset("metadata", "place", "ollur")
+
+	fmt.Println(c.HGetAll("metadata"))
+	fmt.Println(c.HGet("metadata","place"))
+
+	// val, _ := c.Get("name")
+
+	// fmt.Printf("%T \n", val)
+
+	// if str,ok := val.(string); ok{
+	// 	test(str)
+	// }else{
+	// 	fmt.Println("Not a string")
+	// }
+
 }
 
-func NewCache() *Cache {
-	datamap := make(map[string]interface{})
-	return &Cache{data: datamap, length: 0}
-}
-
-func (c *Cache) Set(key string, val interface{}) {
-	c.data[key] = val
-}
-
-func (c *Cache) Del(key string) {
-	delete(c.data, key)
-}
-
-func (c *Cache) Update(key string, val interface{}) error {
-	//check if key is present
-	if _, ok := c.data[key]; ok {
-		return errors.New("key not present")
-	}
-	c.data[key] = val
-	return nil
-}
+// func test(v string) {
+// 	fmt.Println(v)
+// }
