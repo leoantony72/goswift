@@ -1,15 +1,27 @@
 package gowi
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"gowi/gowi/expiry"
+	"time"
+)
 
 type Cache struct {
-	data   map[string]interface{}
+	data   map[string]*DataHolder
 	length int
+	heap   *expiry.Heap
+}
+
+type DataHolder struct {
+	val    interface{}
+	expiry *expiry.Node
 }
 
 func NewCache() *Cache {
-	datamap := make(map[string]interface{})
-	return &Cache{data: datamap, length: 0}
+	datamap := make(map[string]*DataHolder)
+	heap := expiry.Init()
+	return &Cache{data: datamap, length: 0, heap: heap}
 }
 
 func (c *Cache) Exists(key string) bool {
@@ -19,8 +31,19 @@ func (c *Cache) Exists(key string) bool {
 	return false
 }
 
-func (c *Cache) Set(key string, val interface{}) {
-	c.data[key] = val
+func (c *Cache) Set(key string, exp int, val interface{}) {
+	var node *expiry.Node
+	if exp != 0 {
+		exp = exp / 1000
+		expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
+		node = c.heap.Insert(expTime, key)
+		datamap := &DataHolder{val: val, expiry: node}
+		c.data[key] = datamap
+		return
+	}
+	datamap := &DataHolder{val: val}
+	c.data[key] = datamap
+	fmt.Println(c.data[key])
 }
 
 func (c *Cache) Get(key string) (interface{}, error) {
@@ -28,7 +51,16 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	if !ok {
 		return nil, errors.New("key does not exist")
 	}
-	return val, nil
+
+	if val.expiry != nil {
+		fmt.Println(val.expiry.Expiry, time.Now().Unix())
+		if val.expiry.Expiry > time.Now().Unix() {
+			return val, nil
+		}
+		delete(c.data, key)
+		return nil, errors.New("key does not exist")
+	}
+	return val.val, nil
 }
 
 func (c *Cache) Del(key string) {
@@ -44,18 +76,20 @@ func (c *Cache) Update(key string, val interface{}) error {
 	if !c.Exists(key) {
 		return errors.New("key not present")
 	}
-	c.data[key] = val
+	datamap := &DataHolder{val: val}
+	c.data[key] = datamap
 	return nil
 }
 
-func (c *Cache) Hset(key, field string, val interface{}) {
+func (c *Cache) Hset(key, field string, value interface{}) {
 
 	if _, exists := c.data[key]; !exists {
-		c.data[key] = make(map[string]interface{})
+		c.data[key] = &DataHolder{}
+		c.data[key].val = make(map[string]interface{})
 	}
 
-	hash := c.data[key].(map[string]interface{})
-	hash[field] = val
+	hash := c.data[key].val.(map[string]interface{})
+	hash[field] = value
 }
 
 func (c *Cache) HGet(key, field string) (interface{}, error) {
@@ -64,7 +98,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 	}
 	val, _ := c.data[key]
 
-	if mpval, ok := val.(map[string]interface{}); ok {
+	if mpval, ok := val.val.(map[string]interface{}); ok {
 		if data, ok := mpval[field]; ok {
 			return data, nil
 		}
@@ -77,7 +111,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	if data, ok := c.data[key]; ok {
 
-		if mpdata, oks := data.(map[string]interface{}); oks {
+		if mpdata, oks := data.val.(map[string]interface{}); oks {
 			return mpdata, nil
 		}
 		return nil, errors.New("not a Hash value/table")
