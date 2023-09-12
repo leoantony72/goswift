@@ -4,7 +4,7 @@ package expiry
 
 // @Max heap
 type Heap struct {
-	data []*Node
+	Data []*Node
 }
 
 type Node struct {
@@ -18,20 +18,20 @@ func Init() *Heap {
 
 func (h *Heap) Insert(expiry int64, key string) *Node {
 	node := &Node{Kptr: key, Expiry: expiry}
-	h.data = append(h.data, node)
-	h.MaxHeapifyUp(len(h.data) - 1)
+	h.Data = append(h.Data, node)
+	h.MaxHeapifyUp(len(h.Data) - 1)
 	return node
 }
 
 func (h *Heap) MaxHeapifyUp(i int) {
-	for h.data[parent(i)].Expiry < h.data[i].Expiry {
+	for h.Data[parent(i)].Expiry < h.Data[i].Expiry {
 		h.Swap(parent(i), i)
 		i = parent(i)
 	}
 }
 
 func (h *Heap) Swap(i1, i2 int) {
-	h.data[i1], h.data[i2] = h.data[i2], h.data[i1]
+	h.Data[i1], h.Data[i2] = h.Data[i2], h.Data[i1]
 }
 
 func parent(index int) int {

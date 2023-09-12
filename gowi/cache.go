@@ -3,12 +3,12 @@ package gowi
 import (
 	"errors"
 	"fmt"
-	"gowi/gowi/expiry"
+	"gowiz/gowi/expiry"
 	"time"
 )
 
 type Cache struct {
-	data   map[string]*DataHolder
+	Data   map[string]*DataHolder
 	length int
 	heap   *expiry.Heap
 }
@@ -21,11 +21,13 @@ type DataHolder struct {
 func NewCache() *Cache {
 	datamap := make(map[string]*DataHolder)
 	heap := expiry.Init()
-	return &Cache{data: datamap, length: 0, heap: heap}
+	cache := &Cache{Data: datamap, length: 0, heap: heap}
+	go Sweaper(cache, heap)
+	return cache
 }
 
 func (c *Cache) Exists(key string) bool {
-	if _, ok := c.data[key]; ok {
+	if _, ok := c.Data[key]; ok {
 		return true
 	}
 	return false
@@ -38,33 +40,33 @@ func (c *Cache) Set(key string, exp int, val interface{}) {
 		expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
 		node = c.heap.Insert(expTime, key)
 		datamap := &DataHolder{val: val, expiry: node}
-		c.data[key] = datamap
+		c.Data[key] = datamap
 		return
 	}
 	datamap := &DataHolder{val: val}
-	c.data[key] = datamap
-	fmt.Println(c.data[key])
+	c.Data[key] = datamap
+	fmt.Println(c.Data[key])
 }
 
 func (c *Cache) Get(key string) (interface{}, error) {
-	val, ok := c.data[key]
+	val, ok := c.Data[key]
 	if !ok {
 		return nil, errors.New("key does not exist")
 	}
 
-	if val.expiry != nil {
-		fmt.Println(val.expiry.Expiry, time.Now().Unix())
-		if val.expiry.Expiry > time.Now().Unix() {
-			return val, nil
-		}
-		delete(c.data, key)
-		return nil, errors.New("key does not exist")
-	}
+	// if val.expiry != nil {
+	// 	fmt.Println(val.expiry.Expiry, time.Now().Unix())
+	// 	if val.expiry.Expiry > time.Now().Unix() {
+	// 		return val, nil
+	// 	}
+	// 	delete(c.Data, key)
+	// 	return nil, errors.New("key does not exist")
+	// }
 	return val.val, nil
 }
 
 func (c *Cache) Del(key string) {
-	delete(c.data, key)
+	delete(c.Data, key)
 }
 
 func (c *Cache) Update(key string, val interface{}) error {
@@ -77,18 +79,18 @@ func (c *Cache) Update(key string, val interface{}) error {
 		return errors.New("key not present")
 	}
 	datamap := &DataHolder{val: val}
-	c.data[key] = datamap
+	c.Data[key] = datamap
 	return nil
 }
 
 func (c *Cache) Hset(key, field string, value interface{}) {
 
-	if _, exists := c.data[key]; !exists {
-		c.data[key] = &DataHolder{}
-		c.data[key].val = make(map[string]interface{})
+	if _, exists := c.Data[key]; !exists {
+		c.Data[key] = &DataHolder{}
+		c.Data[key].val = make(map[string]interface{})
 	}
 
-	hash := c.data[key].val.(map[string]interface{})
+	hash := c.Data[key].val.(map[string]interface{})
 	hash[field] = value
 }
 
@@ -96,7 +98,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
 		return nil, errors.New("key not present")
 	}
-	val, _ := c.data[key]
+	val, _ := c.Data[key]
 
 	if mpval, ok := val.val.(map[string]interface{}); ok {
 		if data, ok := mpval[field]; ok {
@@ -109,7 +111,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 }
 
 func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
-	if data, ok := c.data[key]; ok {
+	if data, ok := c.Data[key]; ok {
 
 		if mpdata, oks := data.val.(map[string]interface{}); oks {
 			return mpdata, nil
@@ -117,4 +119,33 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 		return nil, errors.New("not a Hash value/table")
 	}
 	return nil, errors.New("key not present")
+}
+
+func Sweaper(c *Cache, h *expiry.Heap) {
+
+	interval := 2 * time.Second
+	fmt.Println(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			{
+				fmt.Println("concurrency active")
+				fmt.Println(len(h.Data))
+				if len(h.Data) == 0 {
+					continue
+				}
+				length := len(h.Data) - 1
+				t := h.Data[length]
+				fmt.Println(t)
+				if t.Expiry < time.Now().Unix() {
+					delete(c.Data, t.Kptr)
+					h.Data = h.Data[:length]
+				}
+				continue
+			}
+		}
+	}
+
 }
