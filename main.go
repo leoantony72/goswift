@@ -15,12 +15,12 @@ func main() {
 	time.Sleep(tf)
 	// c.Del("name")
 
-	// c.Hset("metadata", "age", 19)
-	// c.Hset("metadata", "name", "leo")
-	// c.Hset("metadata", "place", "ollur")
+	c.Hset("metadata", "age", 19)
+	c.Hset("metadata", "name", "leo")
+	c.Hset("metadata", "place", "ollur")
 
-	// fmt.Println(c.HGetAll("metadata"))
-	// fmt.Println(c.HGet("metadata","place"))
+	fmt.Println(c.HGetAll("metadata"))
+	fmt.Println(c.HGet("metadata", "place"))
 
 	// fmt.Println(time.Now().Unix())
 	val, _ := c.Get("name")
@@ -28,6 +28,16 @@ func main() {
 
 	fmt.Printf("%d \n", val)
 	fmt.Printf("%d \n", val2)
+
+	c.Set("test", 10000, "idk")
+
+	c.Del("test")
+
+	c.Set("hello", 10000, "idk2")
+
+	c.Update("hello", "idk3")
+
+	fmt.Println(c.Get("hello"))
 
 	// if str,ok := val.(string); ok{
 	// 	test(str)
@@ -40,5 +50,3 @@ func main() {
 	// <-tg
 
 }
-
-
