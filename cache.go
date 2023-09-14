@@ -1,8 +1,8 @@
-package gowiz
+package goswift
 
 import (
 	"errors"
-	"gowiz/expiry"
+	"goswift/expiry"
 	"sync"
 	"time"
 )

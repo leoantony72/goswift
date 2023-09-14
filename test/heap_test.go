@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
-	"gowiz"
-	"gowiz/expiry"
+	"goswift"
+	"goswift/expiry"
 	"testing"
 	"time"
 )
@@ -41,7 +41,7 @@ func TestHeap(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	c := gowiz.NewCache()
+	c := goswift.NewCache()
 
 	fmt.Println(time.Now().Unix())
 	c.Set("leo", 3000, "kinglol")

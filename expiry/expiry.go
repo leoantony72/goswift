@@ -2,8 +2,6 @@ package expiry
 
 import "errors"
 
-// import "gowi/cache"
-
 // @Min Heap
 type Heap struct {
 	Data []*Node

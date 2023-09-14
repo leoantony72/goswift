@@ -1,7 +1,7 @@
-package gowiz
+package goswift
 
 import (
-	"gowiz/expiry"
+	"goswift/expiry"
 	"time"
 )
 

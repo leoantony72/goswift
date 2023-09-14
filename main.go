@@ -1,4 +1,4 @@
-package gowiz
+package goswift
 
 // import (
 // 	"fmt"
