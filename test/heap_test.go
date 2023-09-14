@@ -2,8 +2,8 @@ package test
 
 import (
 	"fmt"
-	"goswift"
-	"goswift/expiry"
+	"github.com/leoantony72/goswift"
+	"github.com/leoantony72/goswift/expiry"
 	"testing"
 	"time"
 )

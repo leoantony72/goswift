@@ -2,7 +2,7 @@ package goswift
 
 import (
 	"errors"
-	"goswift/expiry"
+	"github.com/leoantony72/goswift/expiry"
 	"sync"
 	"time"
 )
