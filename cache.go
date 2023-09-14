@@ -1,9 +1,8 @@
-package gowi
+package gowiz
 
 import (
 	"errors"
-	"fmt"
-	"gowiz/gowi/expiry"
+	"gowiz/expiry"
 	"sync"
 	"time"
 )
@@ -22,9 +21,9 @@ type DataHolder struct {
 
 func NewCache() *Cache {
 	datamap := make(map[string]*DataHolder)
-	heap := expiry.Init()
-	cache := &Cache{Data: datamap, length: 0, heap: heap}
-	go Sweaper(cache, heap)
+	heapInit := expiry.Init()
+	cache := &Cache{Data: datamap, length: 0, heap: heapInit}
+	go Sweaper(cache, heapInit)
 	return cache
 }
 
@@ -32,70 +31,76 @@ func (c *Cache) Exists(key string) bool {
 	c.mu.Lock()
 	_, ok := c.Data[key]
 	c.mu.Unlock()
-	if ok {
-		return true
-	}
-	return false
+	return ok
 }
 
+// Adds an element to Hash Set, If exp is provided add the
+// Node to the Heap with Key and expiration time(int64).
+// If exp == 0, Item Never expires, thus it isn't added
+// In the Heap
 func (c *Cache) Set(key string, exp int, val interface{}) {
 	var node *expiry.Node
-	if exp != 0 {
-		exp = exp / 1000
-		expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
+	if exp == 0 {
+		data := &DataHolder{val: val}
 		c.mu.Lock()
-		node = c.heap.Insert(expTime, key)
-		datamap := &DataHolder{val: val, expiry: node}
-		c.Data[key] = datamap
+		c.Data[key] = data
 		c.mu.Unlock()
 		return
 	}
-	datamap := &DataHolder{val: val}
+	exp = exp / 1000
+	expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
 	c.mu.Lock()
-	c.Data[key] = datamap
+	node = c.heap.Insert(key, expTime)
+	data := &DataHolder{val: val, expiry: node}
+	c.Data[key] = data
 	c.mu.Unlock()
-	// fmt.Println(c.Data[key])
 }
 
+// If exp is not nil, check if the element has expired or not
+// Removes the element from the cache if expired, It does not remove
+// The Node from the Heap, which will handled by the Sweaper.
+
+// @This must be improved, So that deleted keys does'nt stay in the Heap.
 func (c *Cache) Get(key string) (interface{}, error) {
 	c.mu.Lock()
-	val, ok := c.Data[key]
+	data, ok := c.Data[key]
 	c.mu.Unlock()
 	if !ok {
 		return nil, errors.New("key does not exist")
 	}
 
-	if val.expiry != nil {
-		// fmt.Println(val.expiry.Expiry, time.Now().Unix())
-		if val.expiry.Expiry > time.Now().Unix() {
-			return val, nil
+	if data.expiry != nil {
+		if data.expiry.Expiry > time.Now().Unix() {
+			return data, nil
 		}
 		c.mu.Lock()
 		delete(c.Data, key)
 		c.mu.Unlock()
 		return nil, errors.New("key does not exist")
 	}
-	return val.val, nil
+	return data.val, nil
 }
 
+// Delete's the Item from the Cache
+
+// @This must be improved, So that deleted keys does'nt stay in the Heap.
 func (c *Cache) Del(key string) {
 	c.mu.Lock()
 	delete(c.Data, key)
 	c.mu.Unlock()
 }
 
+// Set a new value for the key only if it already exist.
+// New data will expire at the same time as the prev Key.
 func (c *Cache) Update(key string, val interface{}) error {
-	//check if key is present
-	// if _, ok := c.data[key]; !ok {
-	// 	return errors.New("key not present")
-	// }
-
 	if !c.Exists(key) {
 		return errors.New("key not present")
 	}
-	datamap := &DataHolder{val: val}
+
 	c.mu.Lock()
-	c.Data[key] = datamap
+	e := c.Data[key].expiry
+	data := &DataHolder{val: val, expiry: e}
+	c.Data[key] = data
 	c.mu.Unlock()
 	return nil
 }
@@ -118,7 +123,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 		return nil, errors.New("key not present")
 	}
 	c.mu.Lock()
-	val, _ := c.Data[key]
+	val := c.Data[key]
 	c.mu.Unlock()
 	if mpval, ok := val.val.(map[string]interface{}); ok {
 		if data, ok := mpval[field]; ok {
@@ -144,37 +149,21 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	return nil, errors.New("key not present")
 }
 
-func Sweaper(c *Cache, h *expiry.Heap) {
-	interval := 2 * time.Second
-	// fmt.Println(interval)
-	ticker := time.NewTicker(interval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			{
-				fmt.Println("concurrency active")
-				// fmt.Println(len(h.Data))
-				c.mu.Lock()
-				heaplength := len(h.Data)
-				c.mu.Unlock()
-				if heaplength == 0 {
-					continue
-				}
-				lastIndex := heaplength - 1
-				c.mu.Lock()
-				heapData := h.Data[lastIndex]
-				c.mu.Unlock()
-				fmt.Println(heapData)
-				if heapData.Expiry < time.Now().Unix() {
-					c.mu.Lock()
-					delete(c.Data, heapData.Kptr)
-					h.Data = h.Data[:lastIndex]
-					c.mu.Unlock()
-				}
-				continue
-			}
-		}
+func (c *Cache) DeleteExpiredKeys() {
+	c.mu.Lock()
+	hl := len(c.heap.Data)
+	c.mu.Unlock()
+	if hl == 0 {
+		return
 	}
-
+	c.mu.Lock()
+	node := c.heap.Data[0]
+	c.mu.Unlock()
+	// fmt.Println("Node", node)
+	if time.Now().Unix() > node.Expiry {
+		c.mu.Lock()
+		delete(c.Data, node.Key)
+		c.heap.Extract()
+		c.mu.Unlock()
+	}
 }
