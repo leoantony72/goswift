@@ -42,7 +42,7 @@ func TestHeap(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	c := goswift.Newcache()
+	c := goswift.NewCache()
 
 	fmt.Println(time.Now().Unix())
 	c.Set("leo", 3000, "kinglol")

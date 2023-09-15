@@ -12,26 +12,26 @@ type cache struct {
 	Data   map[string]*dataHolder
 	length int
 	heap   *expiry.Heap
-	mu     sync.Mutex
+	mu     sync.RWMutex
 }
 
 type dataHolder struct {
-	val    interface{}
-	expiry *expiry.Node
+	Value  interface{}
+	Expiry *expiry.Node
 }
 
-func Newcache() cacheFunction {
-	datamap := make(map[string]*dataHolder)
+func NewCache() cacheFunction {
+	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
-	cache := &cache{Data: datamap, length: 0, heap: heapInit}
+	cache := &cache{Data: dataMap, length: 0, heap: heapInit}
 	go sweaper(cache, heapInit)
 	return cache
 }
 
 func (c *cache) Exists(key string) bool {
-	c.mu.Lock()
+	c.mu.RLock()
 	_, ok := c.Data[key]
-	c.mu.Unlock()
+	c.mu.RUnlock()
 	return ok
 }
 
@@ -42,7 +42,7 @@ func (c *cache) Exists(key string) bool {
 func (c *cache) Set(key string, exp int, val interface{}) {
 	var node *expiry.Node
 	if exp == 0 {
-		data := &dataHolder{val: val}
+		data := &dataHolder{Value: val}
 		c.mu.Lock()
 		c.Data[key] = data
 		c.mu.Unlock()
@@ -50,9 +50,9 @@ func (c *cache) Set(key string, exp int, val interface{}) {
 	}
 	exp = exp / 1000
 	expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
-	c.mu.Lock()
 	node = c.heap.Insert(key, expTime)
-	data := &dataHolder{val: val, expiry: node}
+	data := &dataHolder{Value: val, Expiry: node}
+	c.mu.Lock()
 	c.Data[key] = data
 	c.mu.Unlock()
 }
@@ -62,23 +62,23 @@ func (c *cache) Set(key string, exp int, val interface{}) {
 // The Node from the Heap, which will handled by the Sweaper.
 // @This must be improved, So that deleted keys does'nt stay in the Heap.
 func (c *cache) Get(key string) (interface{}, error) {
-	c.mu.Lock()
+	c.mu.RLock()
 	data, ok := c.Data[key]
-	c.mu.Unlock()
+	c.mu.RUnlock()
 	if !ok {
 		return nil, errors.New("key does not exist")
 	}
 
-	if data.expiry != nil {
-		if data.expiry.Expiry > time.Now().Unix() {
-			return data.val, nil
+	if data.Expiry != nil {
+		if data.Expiry.Expiry > time.Now().Unix() {
+			return data.Value, nil
 		}
 		c.mu.Lock()
 		delete(c.Data, key)
 		c.mu.Unlock()
 		return nil, errors.New("key does not exist")
 	}
-	return data.val, nil
+	return data.Value, nil
 }
 
 // Delete's the Item from the cache
@@ -97,8 +97,8 @@ func (c *cache) Update(key string, val interface{}) error {
 	}
 
 	c.mu.Lock()
-	e := c.Data[key].expiry
-	data := &dataHolder{val: val, expiry: e}
+	e := c.Data[key].Expiry
+	data := &dataHolder{Value: val, Expiry: e}
 	c.Data[key] = data
 	c.mu.Unlock()
 	return nil
@@ -109,10 +109,10 @@ func (c *cache) Hset(key, field string, value interface{}) {
 	c.mu.Lock()
 	if _, exists := c.Data[key]; !exists {
 		c.Data[key] = &dataHolder{}
-		c.Data[key].val = make(map[string]interface{})
+		c.Data[key].Value = make(map[string]interface{})
 	}
 
-	hash := c.Data[key].val.(map[string]interface{})
+	hash := c.Data[key].Value.(map[string]interface{})
 	hash[field] = value
 	c.mu.Unlock()
 }
@@ -121,10 +121,10 @@ func (c *cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
 		return nil, errors.New("key not present")
 	}
-	c.mu.Lock()
-	val := c.Data[key]
-	c.mu.Unlock()
-	if mpval, ok := val.val.(map[string]interface{}); ok {
+	c.mu.RLock()
+	data := c.Data[key]
+	c.mu.RUnlock()
+	if mpval, ok := data.Value.(map[string]interface{}); ok {
 		if data, ok := mpval[field]; ok {
 			return data, nil
 		}
@@ -135,13 +135,13 @@ func (c *cache) HGet(key, field string) (interface{}, error) {
 }
 
 func (c *cache) HGetAll(key string) (map[string]interface{}, error) {
-	c.mu.Lock()
+	c.mu.RLock()
 	data, ok := c.Data[key]
-	c.mu.Unlock()
+	c.mu.RUnlock()
 	if ok {
 
-		if mpdata, oks := data.val.(map[string]interface{}); oks {
-			return mpdata, nil
+		if mpData, oks := data.Value.(map[string]interface{}); oks {
+			return mpData, nil
 		}
 		return nil, errors.New("not a Hash value/table")
 	}
@@ -149,16 +149,14 @@ func (c *cache) HGetAll(key string) (map[string]interface{}, error) {
 }
 
 func (c *cache) DeleteExpiredKeys() {
-	c.mu.Lock()
+	c.mu.RLock()
 	hl := len(c.heap.Data)
-	c.mu.Unlock()
 	if hl == 0 {
+		c.mu.RUnlock()
 		return
 	}
-	c.mu.Lock()
 	node := c.heap.Data[0]
 	c.mu.Unlock()
-	// fmt.Println("Node", node)
 	if time.Now().Unix() > node.Expiry {
 		c.mu.Lock()
 		delete(c.Data, node.Key)
