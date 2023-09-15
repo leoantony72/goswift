@@ -2,10 +2,11 @@ package test
 
 import (
 	"fmt"
-	"github.com/leoantony72/goswift"
-	"github.com/leoantony72/goswift/expiry"
 	"testing"
 	"time"
+
+	"github.com/leoantony72/goswift"
+	"github.com/leoantony72/goswift/expiry"
 )
 
 func TestHeap(t *testing.T) {
@@ -41,7 +42,7 @@ func TestHeap(t *testing.T) {
 }
 
 func TestCache(t *testing.T) {
-	c := goswift.NewCache()
+	c := goswift.Newcache()
 
 	fmt.Println(time.Now().Unix())
 	c.Set("leo", 3000, "kinglol")
@@ -50,7 +51,7 @@ func TestCache(t *testing.T) {
 
 	// time.Sleep(time.Second*14)
 
-	// Print(c)
+	// Print()
 
 	ts := make(chan int)
 	ts <- -1

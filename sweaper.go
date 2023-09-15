@@ -1,11 +1,12 @@
 package goswift
 
 import (
-	"github.com/leoantony72/goswift/expiry"
 	"time"
+
+	"github.com/leoantony72/goswift/expiry"
 )
 
-func Sweaper(c *Cache, h *expiry.Heap) {
+func sweaper(c *cache, h *expiry.Heap) {
 	interval := 2 * time.Second
 	// fmt.Println(interval)
 	ticker := time.NewTicker(interval)
