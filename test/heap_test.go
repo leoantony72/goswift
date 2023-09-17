@@ -2,9 +2,11 @@ package test
 
 import (
 	"fmt"
+	"sync"
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/leoantony72/goswift"
 	"github.com/leoantony72/goswift/expiry"
 )
@@ -45,16 +47,73 @@ func TestCache(t *testing.T) {
 	c := goswift.NewCache()
 
 	fmt.Println(time.Now().Unix())
-	c.Set("leo", 3000, "kinglol")
-	c.Set("name", 2000, "leoantony")
-	c.Set("jsondata", 10000, "THIS IS A TEST ")
+	c.Set("leo", 23000, "kinglol")
+	c.Set("name", 9000, "leoantony")
+	c.Set("jsondata", 6000, "THIS IS A TEST ")
+	exp := 3000
+	var wg sync.WaitGroup
+	for i := 0; i < 1000; i++ {
+		wg.Add(3)
+		go AddNode(c, exp, &wg)
+		go AddNode(c, exp, &wg)
+		go AddNode(c, exp, &wg)
+	}
+	c.Set("idk", 2000, "THIS IS A TEST ")
+	c.Set("boiz", 7000, "THIS IS A TEST ")
+	c.Set("no name", 10000, "THIS IS A TEST ")
 
-	// time.Sleep(time.Second*14)
+	wg.Wait()
+
+	PrintALL(c)
+
+	// time.Sleep(time.Second * 20)
+	// fmt.Println(c.AllData())
+	// PrintALL(c)
 
 	// Print()
 
-	ts := make(chan int)
-	ts <- -1
+	c.Del("no name")
+	interval := 1 * time.Second
+	// fmt.Println(interval)
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			PrintALL(c)
+			PrintALLH(c)
+		}
+	}
+}
+
+func PrintALL(c goswift.CacheFunction) {
+	d := c.AllData()
+	fmt.Println(d)
+	counTer := 0
+	for _, v := range d {
+		fmt.Println(v)
+		counTer += 1
+	}
+	fmt.Println("total: ", counTer)
+	fmt.Println("----------------------")
+}
+func PrintALLH(c goswift.CacheFunction) {
+	d := c.AllDataHeap()
+	// fmt.Println(d)
+	counTer := 0
+	for s, v := range d {
+		fmt.Println(s,v)
+		counTer += 1
+	}
+	fmt.Println("total Heap Data: ", counTer)
+	fmt.Println("----------------------")
+}
+
+func AddNode(c goswift.CacheFunction, exp int, wg *sync.WaitGroup) {
+	defer wg.Done()
+	key := uuid.New()
+	v := uuid.New()
+	c.Set(key.String(), exp, v.String())
 }
 
 func Ex(h *expiry.Heap) {

@@ -8,7 +8,7 @@ import (
 	"github.com/leoantony72/goswift/expiry"
 )
 
-type cache struct {
+type Cache struct {
 	Data   map[string]*dataHolder
 	length int
 	heap   *expiry.Heap
@@ -20,15 +20,37 @@ type dataHolder struct {
 	Expiry *expiry.Node
 }
 
-func NewCache() cacheFunction {
+func (c *Cache) AllDataHeap() []*expiry.Node {
+	c.mu.Lock()
+	// var h []*expiry.Heap
+	// d := c.heap.Data
+	dst := make([]*expiry.Node, len(c.heap.Data))
+
+	copy(dst, c.heap.Data)
+	c.mu.Unlock()
+	return dst
+}
+func (c *Cache) AllData() map[string]*dataHolder {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	data := make(map[string]*dataHolder, len(c.Data))
+	for key, value := range c.Data {
+		data[key] = value
+	}
+
+	return data
+}
+
+func NewCache() CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
-	cache := &cache{Data: dataMap, length: 0, heap: heapInit}
+	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
 	go sweaper(cache, heapInit)
 	return cache
 }
 
-func (c *cache) Exists(key string) bool {
+func (c *Cache) Exists(key string) bool {
 	c.mu.RLock()
 	_, ok := c.Data[key]
 	c.mu.RUnlock()
@@ -39,11 +61,11 @@ func (c *cache) Exists(key string) bool {
 // Node to the Heap with Key and expiration time(int64).
 // If exp == 0, Item Never expires, thus it isn't added
 // In the Heap
-func (c *cache) Set(key string, exp int, val interface{}) {
+func (c *Cache) Set(key string, exp int, val interface{}) {
+	c.mu.Lock()
 	var node *expiry.Node
 	if exp == 0 {
 		data := &dataHolder{Value: val}
-		c.mu.Lock()
 		c.Data[key] = data
 		c.mu.Unlock()
 		return
@@ -52,7 +74,6 @@ func (c *cache) Set(key string, exp int, val interface{}) {
 	expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
 	node = c.heap.Insert(key, expTime)
 	data := &dataHolder{Value: val, Expiry: node}
-	c.mu.Lock()
 	c.Data[key] = data
 	c.mu.Unlock()
 }
@@ -61,7 +82,7 @@ func (c *cache) Set(key string, exp int, val interface{}) {
 // Removes the element from the cache if expired, It does not remove
 // The Node from the Heap, which will handled by the Sweaper.
 // @This must be improved, So that deleted keys does'nt stay in the Heap.
-func (c *cache) Get(key string) (interface{}, error) {
+func (c *Cache) Get(key string) (interface{}, error) {
 	c.mu.RLock()
 	data, ok := c.Data[key]
 	c.mu.RUnlock()
@@ -83,15 +104,23 @@ func (c *cache) Get(key string) (interface{}, error) {
 
 // Delete's the Item from the cache
 // @This must be improved, So that deleted keys does'nt stay in the Heap.
-func (c *cache) Del(key string) {
+func (c *Cache) Del(key string) {
 	c.mu.Lock()
+	data, ok := c.Data[key]
+	if !ok {
+		c.mu.Unlock()
+		return
+	}
+
+	index := data.Expiry.Index
+	c.heap.Remove(index, len(c.heap.Data)-1)
 	delete(c.Data, key)
 	c.mu.Unlock()
 }
 
 // Set a new value for the key only if it already exist.
 // New data will expire at the same time as the prev Key.
-func (c *cache) Update(key string, val interface{}) error {
+func (c *Cache) Update(key string, val interface{}) error {
 	if !c.Exists(key) {
 		return errors.New("key not present")
 	}
@@ -104,7 +133,7 @@ func (c *cache) Update(key string, val interface{}) error {
 	return nil
 }
 
-func (c *cache) Hset(key, field string, value interface{}) {
+func (c *Cache) Hset(key, field string, value interface{}) {
 
 	c.mu.Lock()
 	if _, exists := c.Data[key]; !exists {
@@ -117,7 +146,7 @@ func (c *cache) Hset(key, field string, value interface{}) {
 	c.mu.Unlock()
 }
 
-func (c *cache) HGet(key, field string) (interface{}, error) {
+func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
 		return nil, errors.New("key not present")
 	}
@@ -134,7 +163,7 @@ func (c *cache) HGet(key, field string) (interface{}, error) {
 
 }
 
-func (c *cache) HGetAll(key string) (map[string]interface{}, error) {
+func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	c.mu.RLock()
 	data, ok := c.Data[key]
 	c.mu.RUnlock()
@@ -146,21 +175,4 @@ func (c *cache) HGetAll(key string) (map[string]interface{}, error) {
 		return nil, errors.New("not a Hash value/table")
 	}
 	return nil, errors.New("key not present")
-}
-
-func (c *cache) DeleteExpiredKeys() {
-	c.mu.RLock()
-	hl := len(c.heap.Data)
-	if hl == 0 {
-		c.mu.RUnlock()
-		return
-	}
-	node := c.heap.Data[0]
-	c.mu.Unlock()
-	if time.Now().Unix() > node.Expiry {
-		c.mu.Lock()
-		delete(c.Data, node.Key)
-		c.heap.Extract()
-		c.mu.Unlock()
-	}
 }

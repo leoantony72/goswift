@@ -1,6 +1,8 @@
 package goswift
 
-type cacheFunction interface {
+import "github.com/leoantony72/goswift/expiry"
+
+type CacheFunction interface {
 	Exists(key string) bool
 	Set(key string, exp int, val interface{})
 	Get(key string) (interface{}, error)
@@ -9,4 +11,6 @@ type cacheFunction interface {
 	Hset(key, field string, value interface{})
 	HGet(key, field string) (interface{}, error)
 	HGetAll(key string) (map[string]interface{}, error)
+	AllData() map[string]*dataHolder
+	AllDataHeap() []*expiry.Node
 }

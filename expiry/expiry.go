@@ -2,6 +2,7 @@ package expiry
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 )
 
@@ -12,6 +13,7 @@ type Heap struct {
 }
 
 type Node struct {
+	Index  int
 	Key    string
 	Expiry int64
 }
@@ -21,48 +23,58 @@ func Init() *Heap {
 }
 
 func (h *Heap) Insert(key string, expiry int64) *Node {
+	// h.mu.Lock()
+	// if len(h.Data) ==
+	// l := len(h.Data)
+	// if l == 0 {
+	// 	l += 0
+	// } else {
+	// 	l -= 1
+	// }
+	fmt.Println("hlength", len(h.Data))
 	node := &Node{Key: key, Expiry: expiry}
-	h.mu.Lock()
 	h.Data = append(h.Data, node)
-	h.mu.Unlock()
-	h.minHeapifyUp(len(h.Data) - 1)
+	h.minHeapifyUp(len(h.Data)-1, node)
+	// h.mu.Unlock()
 	return node
 }
 
-func (h *Heap) minHeapifyUp(i int) {
-	h.mu.RLock()
+func (h *Heap) minHeapifyUp(i int, node *Node) {
 	for i > 0 && h.Data[parent(i)].Expiry > h.Data[i].Expiry {
+		h.Data[parent(i)].Index = i
+		// h.mu.Unlock()
+		node.Index = parent(i)
 		h.swap(parent(i), i)
+		// h.mu.Lock()
 		i = parent(i)
 	}
-	h.mu.RUnlock()
+	node.Index = i
 }
 
 func (h *Heap) Extract() (*Node, error) {
-	h.mu.RLock()
+	// h.mu.Lock()
 	length := len(h.Data)
-	h.mu.RUnlock()
 	if length == 0 {
+		h.mu.Unlock()
 		return nil, errors.New("no elements in the Heap")
 	}
-	h.mu.Lock()
 	node := h.Data[0]
 	h.Data[0] = h.Data[length-1]
 	h.Data = h.Data[:length-1]
-	h.mu.Unlock()
-	h.minHeapifyDown(0)
+	h.minHeapifyDown(0, node)
+	// h.mu.Unlock()
 	return node, nil
 }
 
-func (h *Heap) minHeapifyDown(i int) {
-	h.mu.RLock()
+func (h *Heap) minHeapifyDown(i int, node *Node) {
+	// h.mu.RLock()
 	lastIndex := len(h.Data) - 1
-	h.mu.RUnlock()
+	// h.mu.RUnlock()
 
 	childToCompare := 0
 	l, r := leftchild(i), rightchild(i)
 	for l <= lastIndex {
-		h.mu.Lock()
+		// h.mu.Lock()
 		if l == lastIndex {
 			childToCompare = l
 		} else if h.Data[l].Expiry < h.Data[r].Expiry {
@@ -72,23 +84,39 @@ func (h *Heap) minHeapifyDown(i int) {
 		}
 
 		if h.Data[childToCompare].Expiry < h.Data[i].Expiry {
+			h.Data[childToCompare].Index = i
+			h.Data[i].Index = childToCompare
 			h.swap(childToCompare, i)
 			i = childToCompare
 			l, r = leftchild(i), rightchild(i)
 		} else {
-			h.mu.Unlock()
+			// h.mu.Unlock()
 			return
 		}
 
-		h.mu.Unlock()
+		// h.mu.Unlock()
 	}
 
 }
 
+func (h *Heap) Remove(nindex, lindex int) {
+	if nindex == lindex {
+		h.Data = h.Data[:len(h.Data)-1]
+		return
+	}
+	// h.mu.Lock()
+	h.Data[nindex].Index = lindex
+	h.Data[lindex].Index = nindex
+	h.swap(nindex, lindex)
+	h.Data = h.Data[:len(h.Data)-1]
+	h.minHeapifyDown(nindex, h.Data[nindex])
+	// h.mu.Unlock()
+}
+
 func (h *Heap) swap(i1, i2 int) {
-	h.mu.Lock()
+	// h.mu.Lock()
 	h.Data[i1], h.Data[i2] = h.Data[i2], h.Data[i1]
-	h.mu.Unlock()
+	// h.mu.Unlock()
 }
 
 func parent(index int) int {
