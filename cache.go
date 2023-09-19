@@ -8,6 +8,11 @@ import (
 	"github.com/leoantony72/goswift/expiry"
 )
 
+const (
+	ErrKeyNotFound  = "key does not Exists"
+	ErrNotHashvalue = "not a Hash value/table"
+)
+
 type Cache struct {
 	Data   map[string]*dataHolder
 	length int
@@ -87,9 +92,8 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	data, ok := c.Data[key]
 	c.mu.RUnlock()
 	if !ok {
-		return nil, errors.New("key does not exist")
+		return nil, errors.New(ErrKeyNotFound)
 	}
-
 	if data.Expiry != nil {
 		if data.Expiry.Expiry > time.Now().Unix() {
 			return data.Value, nil
@@ -97,7 +101,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 		c.mu.Lock()
 		delete(c.Data, key)
 		c.mu.Unlock()
-		return nil, errors.New("key does not exist")
+		return nil, errors.New(ErrKeyNotFound)
 	}
 	return data.Value, nil
 }
@@ -122,7 +126,7 @@ func (c *Cache) Del(key string) {
 // New data will expire at the same time as the prev Key.
 func (c *Cache) Update(key string, val interface{}) error {
 	if !c.Exists(key) {
-		return errors.New("key not present")
+		return errors.New(ErrKeyNotFound)
 	}
 
 	c.mu.Lock()
@@ -148,7 +152,7 @@ func (c *Cache) Hset(key, field string, value interface{}) {
 
 func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
-		return nil, errors.New("key not present")
+		return nil, errors.New(ErrKeyNotFound)
 	}
 	c.mu.RLock()
 	data := c.Data[key]
@@ -157,9 +161,9 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 		if data, ok := mpval[field]; ok {
 			return data, nil
 		}
-		return nil, errors.New("key not present")
+		return nil, errors.New(ErrKeyNotFound)
 	}
-	return nil, errors.New("not a Hash value/table")
+	return nil, errors.New(ErrNotHashvalue)
 
 }
 
@@ -172,7 +176,7 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 		if mpData, oks := data.Value.(map[string]interface{}); oks {
 			return mpData, nil
 		}
-		return nil, errors.New("not a Hash value/table")
+		return nil, errors.New(ErrNotHashvalue)
 	}
-	return nil, errors.New("key not present")
+	return nil, errors.New(ErrKeyNotFound)
 }

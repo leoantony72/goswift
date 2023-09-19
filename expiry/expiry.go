@@ -2,7 +2,6 @@ package expiry
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 )
 
@@ -23,19 +22,9 @@ func Init() *Heap {
 }
 
 func (h *Heap) Insert(key string, expiry int64) *Node {
-	// h.mu.Lock()
-	// if len(h.Data) ==
-	// l := len(h.Data)
-	// if l == 0 {
-	// 	l += 0
-	// } else {
-	// 	l -= 1
-	// }
-	fmt.Println("hlength", len(h.Data))
 	node := &Node{Key: key, Expiry: expiry}
 	h.Data = append(h.Data, node)
 	h.minHeapifyUp(len(h.Data)-1, node)
-	// h.mu.Unlock()
 	return node
 }
 
