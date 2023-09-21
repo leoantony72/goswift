@@ -43,13 +43,128 @@ func TestGet(t *testing.T) {
 	val, err := cache.Get("age")
 	if err != nil {
 		t.Errorf(err.Error())
+		return
 	}
 	if val.(int) != 12 {
 		t.Errorf("Expected Value: 12(int) ,Gotten: %d", val)
+		return
 	}
 }
-func TestHset(t *testing.T){
-	
+
+func TestUpdate(t *testing.T) {
+	c := NewCache()
+
+	key := "users:bob"
+	value := "Cool shirt"
+	c.Set(key, 0, value)
+
+	data, err := c.Get(key)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if data.(string) != value {
+		t.Errorf("Expected Value: %s ,Gotten: %s", value, data)
+		return
+	}
+
+	newValue := "Chemistry sucks"
+	c.Update(key, newValue)
+
+	data, err = c.Get(key)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if data.(string) != newValue {
+		t.Errorf("Expected Value: %s ,Gotten: %s", newValue, data)
+		return
+	}
+}
+
+func TestDel(t *testing.T) {
+
+}
+func TestHset(t *testing.T) {
+	c := NewCache()
+	key := "users:John:metadata"
+	c.Hset(key, "name", "John")
+	c.Hset(key, "age", 20)
+	c.Hset(key, "place", "Thrissur")
+	c.Hset(key, "people", []string{"bob", "tony", "henry"})
+
+	data, err := c.HGetAll(key)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	name := data["name"].(string)
+	age := data["age"].(int)
+	place := data["place"].(string)
+	people := data["people"].([]string)
+
+	expectedArrayValues := []string{"bob", "tony", "henry"}
+
+	if name != "John" {
+		t.Errorf("Expected Value: %s, Gotten: %s", "John", name)
+		return
+	}
+
+	if age != 20 {
+		t.Errorf("Expected Value: %d, Gotten: %d", 20, age)
+		return
+	}
+
+	if place != "Thrissur" {
+		t.Errorf("Expected Value: %s, Gotten: %s", "Thrissur", place)
+		return
+	}
+
+	i := 0
+	t.Run("Hash :Array Data Type", func(t *testing.T) {
+
+		for _, val := range expectedArrayValues {
+			if val != people[i] {
+				t.Errorf("Expected Value: %s, Gotten: %s", val, people[i])
+				return
+			}
+			i++
+		}
+	})
+
+}
+
+func TestHGet(t *testing.T) {
+	c := NewCache()
+
+	key := "users:Jhon:data"
+	field := "age"
+	value := 20
+	c.Hset(key, field, value)
+
+	data, err := c.HGet(key, field)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	if data.(int) != value {
+		t.Errorf("Expected Value: %d, Gotten: %d", value, data)
+		return
+	}
+}
+
+func TestExist(t *testing.T) {
+	c := NewCache()
+
+	key := "users:bob"
+	c.Set(key, 4000, "alien")
+
+	ok := c.Exists(key)
+	if !ok {
+		t.Errorf("Expected Value: %v, Gotten: %v", true, ok)
+		return
+	}
 }
 
 func TestHeapExpiry(t *testing.T) {
