@@ -2,6 +2,7 @@ package goswift
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -61,6 +62,12 @@ func (c *Cache) Exists(key string) bool {
 	c.mu.RUnlock()
 	return ok
 }
+func (c *Cache) ExistsNonBlocking(key string) bool {
+	// c.mu.RLock()
+	_, ok := c.Data[key]
+	// c.mu.RUnlock()
+	return ok
+}
 
 // Adds an element to Hash Set, If exp is provided add the
 // Node to the Heap with Key and expiration time(int64).
@@ -110,8 +117,19 @@ func (c *Cache) Get(key string) (interface{}, error) {
 // @This must be improved, So that deleted keys does'nt stay in the Heap.
 func (c *Cache) Del(key string) {
 	c.mu.Lock()
+	if !c.ExistsNonBlocking(key) {
+		c.mu.Unlock()
+		return
+	}
 	data, ok := c.Data[key]
 	if !ok {
+		c.mu.Unlock()
+		return
+	}
+
+	fmt.Println(data.Expiry)
+	if data.Expiry == nil {
+		delete(c.Data, key)
 		c.mu.Unlock()
 		return
 	}

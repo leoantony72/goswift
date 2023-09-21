@@ -83,6 +83,24 @@ func TestUpdate(t *testing.T) {
 }
 
 func TestDel(t *testing.T) {
+	c := NewCache()
+
+	key := "users:bob"
+	value := "Cool shirt"
+	c.Set(key, 0, value)
+
+	ok := c.Exists(key)
+	if !ok {
+		t.Errorf("Expected Value: %v, Gotten: %v", true, ok)
+		return
+	}
+
+	c.Del(key)
+	ok = c.Exists(key)
+	if ok {
+		t.Errorf("Expected Value: %v, Gotten: %v", false, ok)
+		return
+	}
 
 }
 func TestHset(t *testing.T) {
@@ -165,6 +183,15 @@ func TestExist(t *testing.T) {
 		t.Errorf("Expected Value: %v, Gotten: %v", true, ok)
 		return
 	}
+
+	key = "users:john"
+	t.Run("Key does not exist", func(t *testing.T) {
+		ok := c.Exists(key)
+		if ok {
+			t.Errorf("Expected Value: %v, Gotten: %v", false, ok)
+			return
+		}
+	})
 }
 
 func TestHeapExpiry(t *testing.T) {
