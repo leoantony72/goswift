@@ -36,6 +36,22 @@ func TestSet(t *testing.T) {
 	}
 }
 
+func TestGet(t *testing.T) {
+	cache := NewCache()
+	cache.Set("age", 0, 12)
+
+	val, err := cache.Get("age")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+	if val.(int) != 12 {
+		t.Errorf("Expected Value: 12(int) ,Gotten: %d", val)
+	}
+}
+func TestHset(t *testing.T){
+	
+}
+
 func TestHeapExpiry(t *testing.T) {
 	h := &expiry.Heap{}
 	type th struct {
