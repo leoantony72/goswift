@@ -37,10 +37,10 @@ func TestSet(t *testing.T) {
 }
 
 func TestGet(t *testing.T) {
-	cache := NewCache()
-	cache.Set("age", 0, 12)
+	c := NewCache()
+	c.Set("age", 0, 12)
 
-	val, err := cache.Get("age")
+	val, err := c.Get("age")
 	if err != nil {
 		t.Errorf(err.Error())
 		return
@@ -49,6 +49,36 @@ func TestGet(t *testing.T) {
 		t.Errorf("Expected Value: 12(int) ,Gotten: %d", val)
 		return
 	}
+
+	// Key does not exists
+	_, err = c.Get("name")
+	if err == nil {
+		t.Errorf("Expected Error: %s", ErrKeyNotFound)
+		return
+	}
+
+	//expiry provided- expiry>>time.Now()
+	c.Set("place", 150000, "Kerala")
+	val, err = c.Get("place")
+	if err != nil {
+		t.Errorf(err.Error())
+		t.Errorf("key %s Might be expired", "place")
+		return
+	}
+	if val.(string) != "Kerala" {
+		t.Errorf("Expected Value: %s, Gotten: %s", "Kerala", val.(string))
+		return
+	}
+
+	c.Set("country", 100, "India")
+	_, err = c.Get("country")
+	if err != nil {
+		if err.Error() != ErrKeyNotFound {
+			t.Errorf("key %s Should be Expired", "country")
+			return
+		}
+	}
+
 }
 
 func TestUpdate(t *testing.T) {
@@ -80,11 +110,23 @@ func TestUpdate(t *testing.T) {
 		t.Errorf("Expected Value: %s ,Gotten: %s", newValue, data)
 		return
 	}
+
+	//key does not exist
+	key = "water"
+	err = c.Update(key, "H2O")
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrKeyNotFound)
+		return
+	}
+
+	if err.Error() != ErrKeyNotFound {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
+		return
+	}
 }
 
 func TestDel(t *testing.T) {
 	c := NewCache()
-
 	key := "users:bob"
 	value := "Cool shirt"
 	c.Set(key, 0, value)
@@ -102,6 +144,14 @@ func TestDel(t *testing.T) {
 		return
 	}
 
+	//Key does not exist
+	key = "users:varun"
+	c.Del(key)
+
+	// Key with Expiry
+	key = "users:kingbob"
+	c.Set(key, 10000, "bobbb!")
+	c.Del(key)
 }
 func TestHset(t *testing.T) {
 	c := NewCache()
@@ -194,6 +244,23 @@ func TestExist(t *testing.T) {
 	})
 }
 
+func TestGetAllData(t *testing.T) {
+	c := NewCache()
+
+	keys := []string{"name", "age", "idk"}
+	c.Set(keys[0], 0, "bob")
+	c.Set(keys[1], 0, 22)
+	c.Set(keys[2], 0, "idk")
+	data, _ := c.AllData()
+
+	for i := 0; i < len(keys); i++ {
+		if _, ok := data[keys[i]]; !ok {
+			t.Errorf("Key:%s does't Exist", keys[i])
+		}
+	}
+
+}
+
 func TestHeapExpiry(t *testing.T) {
 	h := &expiry.Heap{}
 	type th struct {
@@ -257,17 +324,6 @@ func TestHeapExpiry(t *testing.T) {
 // 	}
 // }
 
-func PrintALL(c CacheFunction) {
-	d := c.AllData()
-	fmt.Println(d)
-	counTer := 0
-	for _, v := range d {
-		fmt.Println(v)
-		counTer += 1
-	}
-	fmt.Println("total: ", counTer)
-	fmt.Println("----------------------")
-}
 func PrintALLH(c CacheFunction) {
 	d := c.AllDataHeap()
 	// fmt.Println(d)

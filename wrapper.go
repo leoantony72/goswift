@@ -11,6 +11,6 @@ type CacheFunction interface {
 	Hset(key, field string, value interface{})
 	HGet(key, field string) (interface{}, error)
 	HGetAll(key string) (map[string]interface{}, error)
-	AllData() map[string]*dataHolder
+	AllData() (map[string]interface{}, int)
 	AllDataHeap() []*expiry.Node
 }

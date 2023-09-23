@@ -36,16 +36,18 @@ func (c *Cache) AllDataHeap() []*expiry.Node {
 	c.mu.Unlock()
 	return dst
 }
-func (c *Cache) AllData() map[string]*dataHolder {
+func (c *Cache) AllData() (map[string]interface{}, int) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	data := make(map[string]*dataHolder, len(c.Data))
-	for key, value := range c.Data {
-		data[key] = value
+	dataMap := make(map[string]interface{}, len(c.Data))
+	counter := 0
+	for k, v := range c.Data {
+		dataMap[k] = v.Value
+		counter++
 	}
 
-	return data
+	return dataMap, counter
 }
 
 func NewCache() CacheFunction {
@@ -121,11 +123,11 @@ func (c *Cache) Del(key string) {
 		c.mu.Unlock()
 		return
 	}
-	data, ok := c.Data[key]
-	if !ok {
-		c.mu.Unlock()
-		return
-	}
+	data, _ := c.Data[key]
+	// if !ok {
+	// 	c.mu.Unlock()
+	// 	return
+	// }
 
 	fmt.Println(data.Expiry)
 	if data.Expiry == nil {

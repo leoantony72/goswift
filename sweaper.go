@@ -37,11 +37,11 @@ func (c *Cache) DeleteExpiredKeys() {
 			return
 		}
 		node := c.heap.Data[0]
-		fmt.Println(node)
+		// fmt.Println(node)
 		if time.Now().Unix() > node.Expiry {
 			delete(c.Data, node.Key)
-			hn, err := c.heap.Extract()
-			fmt.Println(hn)
+			_, err := c.heap.Extract()
+			fmt.Println(node)
 			if err != nil {
 				c.mu.Unlock()
 				return
