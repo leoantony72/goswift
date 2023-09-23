@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	ErrKeyNotFound  = "key does not Exists"
-	ErrNotHashvalue = "not a Hash value/table"
+	ErrKeyNotFound   = "key does not Exists"
+	ErrFieldNotFound = "field does not Exists"
+	ErrNotHashvalue  = "not a Hash value/table"
 )
 
 type Cache struct {
@@ -26,16 +27,16 @@ type dataHolder struct {
 	Expiry *expiry.Node
 }
 
-func (c *Cache) AllDataHeap() []*expiry.Node {
-	c.mu.Lock()
-	// var h []*expiry.Heap
-	// d := c.heap.Data
-	dst := make([]*expiry.Node, len(c.heap.Data))
+// func (c *Cache) AllDataHeap() []*expiry.Node {
+// 	c.mu.Lock()
+// 	// var h []*expiry.Heap
+// 	// d := c.heap.Data
+// 	dst := make([]*expiry.Node, len(c.heap.Data))
 
-	copy(dst, c.heap.Data)
-	c.mu.Unlock()
-	return dst
-}
+// 	copy(dst, c.heap.Data)
+// 	c.mu.Unlock()
+// 	return dst
+// }
 func (c *Cache) AllData() (map[string]interface{}, int) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -57,6 +58,7 @@ func NewCache() CacheFunction {
 	go sweaper(cache, heapInit)
 	return cache
 }
+
 
 func (c *Cache) Exists(key string) bool {
 	c.mu.RLock()
@@ -123,7 +125,7 @@ func (c *Cache) Del(key string) {
 		c.mu.Unlock()
 		return
 	}
-	data, _ := c.Data[key]
+	data:= c.Data[key]
 	// if !ok {
 	// 	c.mu.Unlock()
 	// 	return
@@ -181,7 +183,7 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 		if data, ok := mpval[field]; ok {
 			return data, nil
 		}
-		return nil, errors.New(ErrKeyNotFound)
+		return nil, errors.New(ErrFieldNotFound)
 	}
 	return nil, errors.New(ErrNotHashvalue)
 

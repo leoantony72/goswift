@@ -20,6 +20,9 @@ func sweaper(c *Cache, h *expiry.Heap) {
 	}
 
 }
+func testDeleteExpiredKeys(c *Cache) {
+	c.DeleteExpiredKeys()
+}
 func (c *Cache) DeleteExpiredKeys() {
 	c.mu.Lock()
 	l := len(c.Data)

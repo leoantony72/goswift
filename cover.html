@@ -1,0 +1,368 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>goswift: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/leoantony72/goswift/cache.go (100.0%)</option>
+				
+				<option value="file1">github.com/leoantony72/goswift/sweaper.go (92.9%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package goswift
+
+import (
+        "errors"
+        "fmt"
+        "sync"
+        "time"
+
+        "github.com/leoantony72/goswift/expiry"
+)
+
+const (
+        ErrKeyNotFound   = "key does not Exists"
+        ErrFieldNotFound = "field does not Exists"
+        ErrNotHashvalue  = "not a Hash value/table"
+)
+
+type Cache struct {
+        Data   map[string]*dataHolder
+        length int
+        heap   *expiry.Heap
+        mu     sync.RWMutex
+}
+
+type dataHolder struct {
+        Value  interface{}
+        Expiry *expiry.Node
+}
+
+// func (c *Cache) AllDataHeap() []*expiry.Node {
+//         c.mu.Lock()
+//         // var h []*expiry.Heap
+//         // d := c.heap.Data
+//         dst := make([]*expiry.Node, len(c.heap.Data))
+
+//         copy(dst, c.heap.Data)
+//         c.mu.Unlock()
+//         return dst
+// }
+func (c *Cache) AllData() (map[string]interface{}, int) <span class="cov8" title="1">{
+        c.mu.RLock()
+        defer c.mu.RUnlock()
+
+        dataMap := make(map[string]interface{}, len(c.Data))
+        counter := 0
+        for k, v := range c.Data </span><span class="cov8" title="1">{
+                dataMap[k] = v.Value
+                counter++
+        }</span>
+
+        <span class="cov8" title="1">return dataMap, counter</span>
+}
+
+func NewCache() CacheFunction <span class="cov8" title="1">{
+        dataMap := make(map[string]*dataHolder)
+        heapInit := expiry.Init()
+        cache := &amp;Cache{Data: dataMap, length: 0, heap: heapInit}
+        go sweaper(cache, heapInit)
+        return cache
+}</span>
+
+
+func (c *Cache) Exists(key string) bool <span class="cov8" title="1">{
+        c.mu.RLock()
+        _, ok := c.Data[key]
+        c.mu.RUnlock()
+        return ok
+}</span>
+func (c *Cache) ExistsNonBlocking(key string) bool <span class="cov8" title="1">{
+        // c.mu.RLock()
+        _, ok := c.Data[key]
+        // c.mu.RUnlock()
+        return ok
+}</span>
+
+// Adds an element to Hash Set, If exp is provided add the
+// Node to the Heap with Key and expiration time(int64).
+// If exp == 0, Item Never expires, thus it isn't added
+// In the Heap
+func (c *Cache) Set(key string, exp int, val interface{}) <span class="cov8" title="1">{
+        c.mu.Lock()
+        var node *expiry.Node
+        if exp == 0 </span><span class="cov8" title="1">{
+                data := &amp;dataHolder{Value: val}
+                c.Data[key] = data
+                c.mu.Unlock()
+                return
+        }</span>
+        <span class="cov8" title="1">exp = exp / 1000
+        expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
+        node = c.heap.Insert(key, expTime)
+        data := &amp;dataHolder{Value: val, Expiry: node}
+        c.Data[key] = data
+        c.mu.Unlock()</span>
+}
+
+// If exp is not nil, check if the element has expired or not
+// Removes the element from the cache if expired, It does not remove
+// The Node from the Heap, which will handled by the Sweaper.
+// @This must be improved, So that deleted keys does'nt stay in the Heap.
+func (c *Cache) Get(key string) (interface{}, error) <span class="cov8" title="1">{
+        c.mu.RLock()
+        data, ok := c.Data[key]
+        c.mu.RUnlock()
+        if !ok </span><span class="cov8" title="1">{
+                return nil, errors.New(ErrKeyNotFound)
+        }</span>
+        <span class="cov8" title="1">if data.Expiry != nil </span><span class="cov8" title="1">{
+                if data.Expiry.Expiry &gt; time.Now().Unix() </span><span class="cov8" title="1">{
+                        return data.Value, nil
+                }</span>
+                <span class="cov8" title="1">c.mu.Lock()
+                delete(c.Data, key)
+                c.mu.Unlock()
+                return nil, errors.New(ErrKeyNotFound)</span>
+        }
+        <span class="cov8" title="1">return data.Value, nil</span>
+}
+
+// Delete's the Item from the cache
+// @This must be improved, So that deleted keys does'nt stay in the Heap.
+func (c *Cache) Del(key string) <span class="cov8" title="1">{
+        c.mu.Lock()
+        if !c.ExistsNonBlocking(key) </span><span class="cov8" title="1">{
+                c.mu.Unlock()
+                return
+        }</span>
+        <span class="cov8" title="1">data:= c.Data[key]
+        // if !ok {
+        //         c.mu.Unlock()
+        //         return
+        // }
+
+        fmt.Println(data.Expiry)
+        if data.Expiry == nil </span><span class="cov8" title="1">{
+                delete(c.Data, key)
+                c.mu.Unlock()
+                return
+        }</span>
+
+        <span class="cov8" title="1">index := data.Expiry.Index
+        c.heap.Remove(index, len(c.heap.Data)-1)
+        delete(c.Data, key)
+        c.mu.Unlock()</span>
+}
+
+// Set a new value for the key only if it already exist.
+// New data will expire at the same time as the prev Key.
+func (c *Cache) Update(key string, val interface{}) error <span class="cov8" title="1">{
+        if !c.Exists(key) </span><span class="cov8" title="1">{
+                return errors.New(ErrKeyNotFound)
+        }</span>
+
+        <span class="cov8" title="1">c.mu.Lock()
+        e := c.Data[key].Expiry
+        data := &amp;dataHolder{Value: val, Expiry: e}
+        c.Data[key] = data
+        c.mu.Unlock()
+        return nil</span>
+}
+
+func (c *Cache) Hset(key, field string, value interface{}) <span class="cov8" title="1">{
+
+        c.mu.Lock()
+        if _, exists := c.Data[key]; !exists </span><span class="cov8" title="1">{
+                c.Data[key] = &amp;dataHolder{}
+                c.Data[key].Value = make(map[string]interface{})
+        }</span>
+
+        <span class="cov8" title="1">hash := c.Data[key].Value.(map[string]interface{})
+        hash[field] = value
+        c.mu.Unlock()</span>
+}
+
+func (c *Cache) HGet(key, field string) (interface{}, error) <span class="cov8" title="1">{
+        if !c.Exists(key) </span><span class="cov8" title="1">{
+                return nil, errors.New(ErrKeyNotFound)
+        }</span>
+        <span class="cov8" title="1">c.mu.RLock()
+        data := c.Data[key]
+        c.mu.RUnlock()
+        if mpval, ok := data.Value.(map[string]interface{}); ok </span><span class="cov8" title="1">{
+                if data, ok := mpval[field]; ok </span><span class="cov8" title="1">{
+                        return data, nil
+                }</span>
+                <span class="cov8" title="1">return nil, errors.New(ErrFieldNotFound)</span>
+        }
+        <span class="cov8" title="1">return nil, errors.New(ErrNotHashvalue)</span>
+
+}
+
+func (c *Cache) HGetAll(key string) (map[string]interface{}, error) <span class="cov8" title="1">{
+        c.mu.RLock()
+        data, ok := c.Data[key]
+        c.mu.RUnlock()
+        if ok </span><span class="cov8" title="1">{
+
+                if mpData, oks := data.Value.(map[string]interface{}); oks </span><span class="cov8" title="1">{
+                        return mpData, nil
+                }</span>
+                <span class="cov8" title="1">return nil, errors.New(ErrNotHashvalue)</span>
+        }
+        <span class="cov8" title="1">return nil, errors.New(ErrKeyNotFound)</span>
+}
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package goswift
+
+import (
+        "fmt"
+        "time"
+
+        "github.com/leoantony72/goswift/expiry"
+)
+
+func sweaper(c *Cache, h *expiry.Heap) <span class="cov8" title="1">{
+        interval := 3 * time.Second
+        // fmt.Println(interval)
+        ticker := time.NewTicker(interval)
+        defer ticker.Stop()
+        for </span><span class="cov8" title="1">{
+                select </span>{
+                case &lt;-ticker.C:<span class="cov8" title="1">
+                        c.DeleteExpiredKeys()</span>
+                }
+        }
+
+}
+func testDeleteExpiredKeys(c *Cache) <span class="cov8" title="1">{
+        c.DeleteExpiredKeys()
+}</span>
+func (c *Cache) DeleteExpiredKeys() <span class="cov8" title="1">{
+        c.mu.Lock()
+        l := len(c.Data)
+        n := (10 * l) / 100
+        if l &lt;= 500 </span><span class="cov8" title="1">{
+                n = 500
+        }</span>
+        <span class="cov8" title="1">fmt.Println("N IS ITER: ", n)
+
+        for i := 0; i &lt; n; i++ </span><span class="cov8" title="1">{
+                hl := len(c.heap.Data)
+                fmt.Println(hl)
+                if hl == 0 </span><span class="cov8" title="1">{
+                        c.mu.Unlock()
+                        return
+                }</span>
+                <span class="cov8" title="1">node := c.heap.Data[0]
+                // fmt.Println(node)
+                if time.Now().Unix() &gt; node.Expiry </span><span class="cov8" title="1">{
+                        delete(c.Data, node.Key)
+                        _, err := c.heap.Extract()
+                        fmt.Println(node)
+                        if err != nil </span><span class="cov0" title="0">{
+                                c.mu.Unlock()
+                                return
+                        }</span>
+                        // fmt.Println(c.heap.Data)
+                }
+        }
+        <span class="cov8" title="1">c.mu.Unlock()</span>
+
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -49,6 +49,7 @@ func (h *Heap) Extract() (*Node, error) {
 	}
 	node := h.Data[0]
 	h.Data[0] = h.Data[length-1]
+	h.Data[0].Index = 0
 	h.Data = h.Data[:length-1]
 	h.minHeapifyDown(0, node)
 	// h.mu.Unlock()

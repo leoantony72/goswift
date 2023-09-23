@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	// "github.com/leoantony72/goswift"
@@ -220,6 +221,82 @@ func TestHGet(t *testing.T) {
 		t.Errorf("Expected Value: %d, Gotten: %d", value, data)
 		return
 	}
+
+	// key does not exists
+	key = "fruits"
+	_, err = c.HGet(key, "sweet")
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrKeyNotFound)
+		return
+	}
+
+	if err.Error() != ErrKeyNotFound {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
+		return
+	}
+
+	// field does not exist
+	key = "fruits"
+	field = "bitter"
+	c.Hset(key, field, "lemons")
+	_, err = c.HGet(key, "sweet")
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrFieldNotFound)
+		return
+	}
+
+	if err.Error() != ErrFieldNotFound {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrFieldNotFound, err.Error())
+		return
+	}
+
+	// Not an Hash Value
+	key = "fruits"
+	v := "orange"
+	c.Set(key, 0, v)
+	_, err = c.HGet(key, "sweet")
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrNotHashvalue)
+		return
+	}
+
+	if err.Error() != ErrNotHashvalue {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrNotHashvalue, err.Error())
+		return
+	}
+}
+
+func TestHgetAll(t *testing.T) {
+	c := NewCache()
+
+	//key does not exists
+	key := "users:bob"
+	_, err := c.HGetAll(key)
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrKeyNotFound)
+		return
+	}
+
+	if err.Error() != ErrKeyNotFound {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
+		return
+	}
+
+	//value not hash
+	key = "fruits"
+	v := "orange"
+	c.Set(key, 0, v)
+	_, err = c.HGetAll(key)
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrNotHashvalue)
+		return
+	}
+
+	if err.Error() != ErrNotHashvalue {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrNotHashvalue, err.Error())
+		return
+	}
+
 }
 
 func TestExist(t *testing.T) {
@@ -261,31 +338,32 @@ func TestGetAllData(t *testing.T) {
 
 }
 
-func TestHeapExpiry(t *testing.T) {
-	h := &expiry.Heap{}
-	type th struct {
-		key    string
-		expiry int64
-	}
-	buildheap := []th{{"t1", 23}, {"t2", 12}, {"t3", 123}, {"t4", 436}, {"t5", 2}, {"t6", 14}, {"t7", 1}, {"t7", 6}}
+func TestDeleteExpiredKeys(t *testing.T) {
+	c := NewCache().(*Cache)
 
-	for _, v := range buildheap {
-		h.Insert(v.key, v.expiry)
-	}
+	c.Set("key1", 1000, "t1")
+	c.Set("key2", 2000, "t1")
+	c.Set("key3", 10000, "t1")
 
-	ExpectedValue := []int{1, 2, 6, 12, 14, 23, 123, 436}
-	//Check heap values
-	t.Run("HeapSortTest", func(t *testing.T) {
-		for i := 0; i < len(ExpectedValue); i++ {
-			val := Ex(h)
-			if int(val.Expiry) != ExpectedValue[i] {
-				t.Errorf("Expected Value: %d, Gotten : %d", ExpectedValue[i], val.Expiry)
-				return
-			}
-			// fmt.Println(val.Expiry, ExpectedValue[i])
-		}
-	})
+	time.Sleep(time.Second * 3)
+	testDeleteExpiredKeys(c)
+
+	if c.Exists("key1") || c.Exists("key2") {
+		t.Errorf("key1 & key2 has not been removed")
+		return
+	}
+	if !c.Exists("key3") {
+		t.Errorf("key3 should exists")
+	}
+	c.Del("key3")
+	testDeleteExpiredKeys(c)
+
+	c.Set("key4", 0, "t4")
+	testDeleteExpiredKeys(c)
+
 }
+
+
 
 // func TestCache(t *testing.T) {
 // 	c := goswift.NewCache()
@@ -324,28 +402,23 @@ func TestHeapExpiry(t *testing.T) {
 // 	}
 // }
 
-func PrintALLH(c CacheFunction) {
-	d := c.AllDataHeap()
-	// fmt.Println(d)
-	counTer := 0
-	for s, v := range d {
-		fmt.Println(s, v)
-		counTer += 1
-	}
-	fmt.Println("total Heap Data: ", counTer)
-	fmt.Println("----------------------")
-}
+// func PrintALLH(c CacheFunction) {
+// 	d := c.AllDataHeap()
+// 	// fmt.Println(d)
+// 	counTer := 0
+// 	for s, v := range d {
+// 		fmt.Println(s, v)
+// 		counTer += 1
+// 	}
+// 	fmt.Println("total Heap Data: ", counTer)
+// 	fmt.Println("----------------------")
+// }
 
 func AddNode(c CacheFunction, exp int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	key := uuid.New()
 	v := uuid.New()
 	c.Set(key.String(), exp, v.String())
-}
-
-func Ex(h *expiry.Heap) *expiry.Node {
-	c, _ := h.Extract()
-	return c
 }
 
 func Print(h *expiry.Heap) {
