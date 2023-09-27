@@ -1,7 +1,6 @@
 package goswift
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/leoantony72/goswift/expiry"
@@ -30,11 +29,11 @@ func (c *Cache) DeleteExpiredKeys() {
 	if l <= 500 {
 		n = 500
 	}
-	fmt.Println("N IS ITER: ", n)
+	// fmt.Println("N IS ITER: ", n)
 
 	for i := 0; i < n; i++ {
 		hl := len(c.heap.Data)
-		fmt.Println(hl)
+		// fmt.Println(hl)
 		if hl == 0 {
 			c.mu.Unlock()
 			return
@@ -44,7 +43,7 @@ func (c *Cache) DeleteExpiredKeys() {
 		if time.Now().Unix() > node.Expiry {
 			delete(c.Data, node.Key)
 			_, err := c.heap.Extract()
-			fmt.Println(node)
+			// fmt.Println(node)
 			if err != nil {
 				c.mu.Unlock()
 				return

@@ -21,7 +21,7 @@ func TestSet(t *testing.T) {
 
 	key := "name"
 	val := "leoantony"
-	cache.Set(key, 0, val)
+	cache.Set(key, val, 0)
 
 	getValue, err := cache.Get(key)
 	if err != nil {
@@ -39,7 +39,7 @@ func TestSet(t *testing.T) {
 
 func TestGet(t *testing.T) {
 	c := NewCache()
-	c.Set("age", 0, 12)
+	c.Set("age", 12, 0)
 
 	val, err := c.Get("age")
 	if err != nil {
@@ -59,7 +59,7 @@ func TestGet(t *testing.T) {
 	}
 
 	//expiry provided- expiry>>time.Now()
-	c.Set("place", 150000, "Kerala")
+	c.Set("place", "Kerala", 150000)
 	val, err = c.Get("place")
 	if err != nil {
 		t.Errorf(err.Error())
@@ -71,7 +71,7 @@ func TestGet(t *testing.T) {
 		return
 	}
 
-	c.Set("country", 100, "India")
+	c.Set("country", "India", 100)
 	_, err = c.Get("country")
 	if err != nil {
 		if err.Error() != ErrKeyNotFound {
@@ -87,7 +87,7 @@ func TestUpdate(t *testing.T) {
 
 	key := "users:bob"
 	value := "Cool shirt"
-	c.Set(key, 0, value)
+	c.Set(key, value, 0)
 
 	data, err := c.Get(key)
 	if err != nil {
@@ -130,7 +130,7 @@ func TestDel(t *testing.T) {
 	c := NewCache()
 	key := "users:bob"
 	value := "Cool shirt"
-	c.Set(key, 0, value)
+	c.Set(key, value, 0)
 
 	ok := c.Exists(key)
 	if !ok {
@@ -151,7 +151,7 @@ func TestDel(t *testing.T) {
 
 	// Key with Expiry
 	key = "users:kingbob"
-	c.Set(key, 10000, "bobbb!")
+	c.Set(key, "bobbb!", 10000)
 	c.Del(key)
 }
 func TestHset(t *testing.T) {
@@ -253,7 +253,7 @@ func TestHGet(t *testing.T) {
 	// Not an Hash Value
 	key = "fruits"
 	v := "orange"
-	c.Set(key, 0, v)
+	c.Set(key, v, 0)
 	_, err = c.HGet(key, "sweet")
 	if err == nil {
 		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrNotHashvalue)
@@ -285,7 +285,7 @@ func TestHgetAll(t *testing.T) {
 	//value not hash
 	key = "fruits"
 	v := "orange"
-	c.Set(key, 0, v)
+	c.Set(key, v, 0)
 	_, err = c.HGetAll(key)
 	if err == nil {
 		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrNotHashvalue)
@@ -303,7 +303,7 @@ func TestExist(t *testing.T) {
 	c := NewCache()
 
 	key := "users:bob"
-	c.Set(key, 4000, "alien")
+	c.Set(key, "mexican alien", 4000)
 
 	ok := c.Exists(key)
 	if !ok {
@@ -325,9 +325,9 @@ func TestGetAllData(t *testing.T) {
 	c := NewCache()
 
 	keys := []string{"name", "age", "idk"}
-	c.Set(keys[0], 0, "bob")
-	c.Set(keys[1], 0, 22)
-	c.Set(keys[2], 0, "idk")
+	c.Set(keys[0], "bob", 0)
+	c.Set(keys[1], 22, 0)
+	c.Set(keys[2], "idk", 0)
 	data, _ := c.AllData()
 
 	for i := 0; i < len(keys); i++ {
@@ -341,9 +341,9 @@ func TestGetAllData(t *testing.T) {
 func TestDeleteExpiredKeys(t *testing.T) {
 	c := NewCache().(*Cache)
 
-	c.Set("key1", 1000, "t1")
-	c.Set("key2", 2000, "t1")
-	c.Set("key3", 10000, "t1")
+	c.Set("key1", "t1", 1000)
+	c.Set("key2", "t1", 2000)
+	c.Set("key3", "t1", 10000)
 
 	time.Sleep(time.Second * 3)
 	testDeleteExpiredKeys(c)
@@ -358,12 +358,10 @@ func TestDeleteExpiredKeys(t *testing.T) {
 	c.Del("key3")
 	testDeleteExpiredKeys(c)
 
-	c.Set("key4", 0, "t4")
+	c.Set("key4", "t4", 0)
 	testDeleteExpiredKeys(c)
 
 }
-
-
 
 // func TestCache(t *testing.T) {
 // 	c := goswift.NewCache()
@@ -418,7 +416,7 @@ func AddNode(c CacheFunction, exp int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	key := uuid.New()
 	v := uuid.New()
-	c.Set(key.String(), exp, v.String())
+	c.Set(key.String(), v.String(), exp)
 }
 
 func Print(h *expiry.Heap) {

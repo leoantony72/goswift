@@ -37,6 +37,10 @@ type dataHolder struct {
 // 	c.mu.Unlock()
 // 	return dst
 // }
+
+// returns all data from the map with both key and value,
+// expiry data will not be returned, returned data will be a
+// copy of the original data
 func (c *Cache) AllData() (map[string]interface{}, int) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -51,6 +55,8 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
+// Initialize a New CacheFunction type which is an Interfaces
+// for all the availabel function
 func NewCache() CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
@@ -59,17 +65,18 @@ func NewCache() CacheFunction {
 	return cache
 }
 
-
+// Exists func receives the key check if it exists in the
+// Hash Table and returns a boolean
 func (c *Cache) Exists(key string) bool {
 	c.mu.RLock()
 	_, ok := c.Data[key]
 	c.mu.RUnlock()
 	return ok
 }
+
+// Internal exist func wihtout locking(c.mu.Lock)
 func (c *Cache) ExistsNonBlocking(key string) bool {
-	// c.mu.RLock()
 	_, ok := c.Data[key]
-	// c.mu.RUnlock()
 	return ok
 }
 
@@ -77,7 +84,7 @@ func (c *Cache) ExistsNonBlocking(key string) bool {
 // Node to the Heap with Key and expiration time(int64).
 // If exp == 0, Item Never expires, thus it isn't added
 // In the Heap
-func (c *Cache) Set(key string, exp int, val interface{}) {
+func (c *Cache) Set(key string, val interface{}, exp int) {
 	c.mu.Lock()
 	var node *expiry.Node
 	if exp == 0 {
@@ -125,7 +132,7 @@ func (c *Cache) Del(key string) {
 		c.mu.Unlock()
 		return
 	}
-	data:= c.Data[key]
+	data := c.Data[key]
 	// if !ok {
 	// 	c.mu.Unlock()
 	// 	return
@@ -159,6 +166,7 @@ func (c *Cache) Update(key string, val interface{}) error {
 	return nil
 }
 
+// Support for Hash data type, Hset func receives key, field and value
 func (c *Cache) Hset(key, field string, value interface{}) {
 
 	c.mu.Lock()
@@ -172,6 +180,8 @@ func (c *Cache) Hset(key, field string, value interface{}) {
 	c.mu.Unlock()
 }
 
+
+// Retrieves the field value of hash by key and field name 
 func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
 		return nil, errors.New(ErrKeyNotFound)
@@ -189,6 +199,8 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 
 }
 
+
+// HgetAll retrives all the fields in a Hash by providing the key
 func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	c.mu.RLock()
 	data, ok := c.Data[key]

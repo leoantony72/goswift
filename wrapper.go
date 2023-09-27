@@ -2,7 +2,7 @@ package goswift
 
 type CacheFunction interface {
 	Exists(key string) bool
-	Set(key string, exp int, val interface{})
+	Set(key string, val interface{}, exp int)
 	Get(key string) (interface{}, error)
 	Del(key string)
 	Update(key string, val interface{}) error
