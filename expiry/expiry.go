@@ -44,7 +44,7 @@ func (h *Heap) Extract() (*Node, error) {
 	// h.mu.Lock()
 	length := len(h.Data)
 	if length == 0 {
-		h.mu.Unlock()
+		// h.mu.Unlock()
 		return nil, errors.New("no elements in the Heap")
 	}
 	node := h.Data[0]
