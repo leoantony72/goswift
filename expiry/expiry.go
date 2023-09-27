@@ -21,6 +21,9 @@ func Init() *Heap {
 	return &Heap{}
 }
 
+// Takes a key and expiry > 0, Node is added in the last index
+// MinheapifyUp func is runned to swap the child node to
+// parent node if the exoiry is less than the parent node
 func (h *Heap) Insert(key string, expiry int64) *Node {
 	node := &Node{Key: key, Expiry: expiry}
 	h.Data = append(h.Data, node)
@@ -28,6 +31,8 @@ func (h *Heap) Insert(key string, expiry int64) *Node {
 	return node
 }
 
+// swap the child node to parent node if expiry is less than
+// of the parent node
 func (h *Heap) minHeapifyUp(i int, node *Node) {
 	for i > 0 && h.Data[parent(i)].Expiry > h.Data[i].Expiry {
 		h.Data[parent(i)].Index = i
@@ -40,6 +45,9 @@ func (h *Heap) minHeapifyUp(i int, node *Node) {
 	node.Index = i
 }
 
+// Extract function retrives the root node by swapping
+// root node with the last node and removing it from the last index
+// Last node is then heapifyed Down
 func (h *Heap) Extract() (*Node, error) {
 	// h.mu.Lock()
 	length := len(h.Data)
@@ -56,6 +64,8 @@ func (h *Heap) Extract() (*Node, error) {
 	return node, nil
 }
 
+// Swaps the parent node with the child node if the child node
+// expiry is less than parent node
 func (h *Heap) minHeapifyDown(i int, node *Node) {
 	// h.mu.RLock()
 	lastIndex := len(h.Data) - 1
@@ -89,6 +99,10 @@ func (h *Heap) minHeapifyDown(i int, node *Node) {
 
 }
 
+// Remove takes node Index(index of the node to be removed)
+// and the last index in the heap, changes the node.Index value
+// then swaps them. Finally minHeapifyDown is called to make it
+// a valid MinHeap
 func (h *Heap) Remove(nindex, lindex int) {
 	if nindex == lindex {
 		h.Data = h.Data[:len(h.Data)-1]
@@ -103,20 +117,25 @@ func (h *Heap) Remove(nindex, lindex int) {
 	// h.mu.Unlock()
 }
 
+// swap func takes the index of the elements to be swapped
+// and then swaps them
 func (h *Heap) swap(i1, i2 int) {
 	// h.mu.Lock()
 	h.Data[i1], h.Data[i2] = h.Data[i2], h.Data[i1]
 	// h.mu.Unlock()
 }
 
+//formula to get the parent node of a node
 func parent(index int) int {
 	return (index - 1) / 2
 }
 
+//formula to get the left child of a node
 func leftchild(index int) int {
 	return 2*index + 1
 }
 
+//formula to get the right child of a node
 func rightchild(index int) int {
 	return 2*index + 2
 }
