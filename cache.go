@@ -167,12 +167,20 @@ func (c *Cache) Update(key string, val interface{}) error {
 }
 
 // Support for Hash data type, Hset func receives key, field and value
-func (c *Cache) Hset(key, field string, value interface{}) {
+func (c *Cache) Hset(key, field string, value interface{}, exp int) {
 
 	c.mu.Lock()
 	if _, exists := c.Data[key]; !exists {
 		c.Data[key] = &dataHolder{}
 		c.Data[key].Value = make(map[string]interface{})
+	}
+	var node *expiry.Node
+
+	if exp != 0 {
+		exp = exp / 1000
+		expTime := time.Now().Add(time.Second * time.Duration(exp)).Unix()
+		node = c.heap.Insert(key, expTime)
+		c.Data[key].Expiry = node
 	}
 
 	hash := c.Data[key].Value.(map[string]interface{})
@@ -180,8 +188,7 @@ func (c *Cache) Hset(key, field string, value interface{}) {
 	c.mu.Unlock()
 }
 
-
-// Retrieves the field value of hash by key and field name 
+// Retrieves the field value of hash by key and field name
 func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
 		return nil, errors.New(ErrKeyNotFound)
@@ -190,15 +197,24 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 	data := c.Data[key]
 	c.mu.RUnlock()
 	if mpval, ok := data.Value.(map[string]interface{}); ok {
-		if data, ok := mpval[field]; ok {
-			return data, nil
+
+		if dataf, ok := mpval[field]; ok {
+			if data.Expiry != nil {
+				if data.Expiry.Expiry > time.Now().Unix() {
+					return dataf, nil
+				}
+				c.mu.Lock()
+				delete(c.Data, key)
+				c.mu.Unlock()
+				return nil, errors.New(ErrKeyNotFound)
+			}
+			return dataf, nil
 		}
 		return nil, errors.New(ErrFieldNotFound)
 	}
 	return nil, errors.New(ErrNotHashvalue)
 
 }
-
 
 // HgetAll retrives all the fields in a Hash by providing the key
 func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
@@ -208,6 +224,15 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	if ok {
 
 		if mpData, oks := data.Value.(map[string]interface{}); oks {
+			if data.Expiry != nil {
+				if data.Expiry.Expiry > time.Now().Unix() {
+					return mpData, nil
+				}
+				c.mu.Lock()
+				delete(c.Data, key)
+				c.mu.Unlock()
+				return nil, errors.New(ErrKeyNotFound)
+			}
 			return mpData, nil
 		}
 		return nil, errors.New(ErrNotHashvalue)

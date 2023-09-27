@@ -157,10 +157,10 @@ func TestDel(t *testing.T) {
 func TestHset(t *testing.T) {
 	c := NewCache()
 	key := "users:John:metadata"
-	c.Hset(key, "name", "John")
-	c.Hset(key, "age", 20)
-	c.Hset(key, "place", "Thrissur")
-	c.Hset(key, "people", []string{"bob", "tony", "henry"})
+	c.Hset(key, "name", "John", 0)
+	c.Hset(key, "age", 20, 0)
+	c.Hset(key, "place", "Thrissur", 0)
+	c.Hset(key, "people", []string{"bob", "tony", "henry"}, 0)
 
 	data, err := c.HGetAll(key)
 	if err != nil {
@@ -202,6 +202,30 @@ func TestHset(t *testing.T) {
 		}
 	})
 
+	// hset with expiry non expired
+	key = "users:user3"
+	c.Hset(key, "test", "testvalue", 3000)
+
+	_, err = c.HGet(key, "test")
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	//hset with expiry expired key
+	key = "users:user4"
+	c.Hset(key, "test", "testvalue", 100)
+
+	_, err = c.HGet(key, "test")
+	if err == nil {
+		t.Errorf("expected error: %s, Gotten: nil", ErrKeyNotFound)
+		return
+	}
+	if err.Error() != ErrKeyNotFound {
+		t.Errorf("expected error: %s, Gotten: %s", ErrKeyNotFound, err.Error())
+		return
+	}
+
 }
 
 func TestHGet(t *testing.T) {
@@ -210,7 +234,7 @@ func TestHGet(t *testing.T) {
 	key := "users:Jhon:data"
 	field := "age"
 	value := 20
-	c.Hset(key, field, value)
+	c.Hset(key, field, value, 0)
 
 	data, err := c.HGet(key, field)
 	if err != nil {
@@ -238,7 +262,7 @@ func TestHGet(t *testing.T) {
 	// field does not exist
 	key = "fruits"
 	field = "bitter"
-	c.Hset(key, field, "lemons")
+	c.Hset(key, field, "lemons", 0)
 	_, err = c.HGet(key, "sweet")
 	if err == nil {
 		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrFieldNotFound)
@@ -294,6 +318,29 @@ func TestHgetAll(t *testing.T) {
 
 	if err.Error() != ErrNotHashvalue {
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrNotHashvalue, err.Error())
+		return
+	}
+
+	//hgetall with expiry- non expired
+	key = "users:user5"
+	c.Hset(key, "test", "testvalue", 3000)
+
+	_, err = c.HGetAll(key)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+	//hgetall with expiry-  expired
+	key = "users:user6"
+	c.Hset(key, "test", "testvalue", 100)
+
+	_, err = c.HGetAll(key)
+	if err == nil {
+		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrKeyNotFound)
+		return
+	}
+	if err.Error() != ErrKeyNotFound {
+		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
 

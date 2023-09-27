@@ -6,7 +6,7 @@ type CacheFunction interface {
 	Get(key string) (interface{}, error)
 	Del(key string)
 	Update(key string, val interface{}) error
-	Hset(key, field string, value interface{})
+	Hset(key, field string, value interface{}, exp int)
 	HGet(key, field string) (interface{}, error)
 	HGetAll(key string) (map[string]interface{}, error)
 	AllData() (map[string]interface{}, int)
