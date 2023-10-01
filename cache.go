@@ -3,6 +3,7 @@ package goswift
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"sync"
 	"time"
 
@@ -214,6 +215,33 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 	}
 	return nil, errors.New(ErrNotHashvalue)
 
+}
+
+/* @struct
+type t struct{
+	name string
+	age int
+	place string
+}
+
+type tm map[string]int
+
+tm{}
+*/
+
+func (c *Cache) HMset(key string, d interface{}) {
+	valType := reflect.TypeOf(d)
+
+	switch valType.Kind() {
+	case reflect.Struct:
+		{
+			c.Data[key] = &dataHolder{Value: make(map[string]interface{})}
+			for i := 0; i < valType.NumField(); i++ {
+				
+			}
+		}
+	case reflect.Map:
+	}
 }
 
 // HgetAll retrives all the fields in a Hash by providing the key
