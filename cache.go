@@ -261,19 +261,19 @@ func (c *Cache) HMset(key string, d interface{}, exp int) error {
 		{
 			c.mu.Lock()
 			c.Data[key] = &dataHolder{Value: make(map[string]interface{})}
+			c.mu.Unlock()
 			for i := 0; i < valType.NumField(); i++ {
 				field := valType.Field(i)
 				value := fieldValues.Field(i).Interface()
 				c.Hset(key, field.Name, value, exp)
 			}
-			c.mu.Unlock()
 		}
 	case reflect.Map:
 		{
 			for field, value := range d.(map[string]interface{}) {
-				c.mu.Lock()
+				// c.mu.Lock()
 				c.Hset(key, field, value, exp)
-				c.mu.Unlock()
+				// c.mu.Unlock()
 			}
 		}
 	default:
