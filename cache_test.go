@@ -346,6 +346,80 @@ func TestHgetAll(t *testing.T) {
 
 }
 
+func TestHmset(t *testing.T) {
+	c := NewCache()
+
+	//Hmset struct test
+	type ts struct {
+		Name  string
+		Age   int
+		Place string
+	}
+
+	data := &ts{Name: "leo", Age: 23, Place: "ollur"}
+	err := c.HMset("meta", data, 3000)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	// time.Sleep(time.Second * 4)
+	ds, err := c.HGetAll("meta")
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	heapdata := testHeaps(c.(*Cache))
+	if len(heapdata) > 1 {
+		t.Errorf("expected heap length: 1 , gotten: %d", len(heapdata))
+		return
+	}
+	if ds == nil {
+		t.Errorf("expected to contain data,gotten nil")
+		return
+	}
+
+	//hmset map test
+	mapdata := map[string]interface{}{
+		"name":  "loki",
+		"place": "asgard",
+		"age":   1054,
+	}
+	err = c.HMset("meta2", mapdata, 0)
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	ds, err = c.HGetAll("meta2")
+	if err != nil {
+		t.Errorf(err.Error())
+		return
+	}
+
+	heapdata = testHeaps(c.(*Cache))
+	if len(heapdata) > 1 {
+		t.Errorf("expected heap length: 1 , gotten: %d", len(heapdata))
+		return
+	}
+	if ds == nil {
+		t.Errorf("expected to contain data,gotten nil")
+		return
+	}
+
+	//invalid data type
+
+	err = c.HMset("meta3", 34, 0)
+	if err == nil {
+		t.Errorf("expected to contain data,gotten nil")
+		return
+	}
+	if err.Error() != ErrHmsetDataType {
+		t.Errorf("expected error %s,gotten: %s", ErrHmsetDataType, err.Error())
+	}
+}
+
 func TestExist(t *testing.T) {
 	c := NewCache()
 

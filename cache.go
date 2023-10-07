@@ -14,6 +14,7 @@ const (
 	ErrKeyNotFound   = "key does not Exists"
 	ErrFieldNotFound = "field does not Exists"
 	ErrNotHashvalue  = "not a Hash value/table"
+	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 
 type Cache struct {
@@ -64,6 +65,17 @@ func NewCache() CacheFunction {
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
 	go sweaper(cache, heapInit)
 	return cache
+}
+
+func testHeaps(c *Cache) []*expiry.Node {
+	c.mu.Lock()
+	// var h []*expiry.Heap
+	// d := c.heap.Data
+	dst := make([]*expiry.Node, len(c.heap.Data))
+
+	copy(dst, c.heap.Data)
+	c.mu.Unlock()
+	return dst
 }
 
 // Exists func receives the key check if it exists in the
@@ -174,6 +186,10 @@ func (c *Cache) Hset(key, field string, value interface{}, exp int) {
 	if _, exists := c.Data[key]; !exists {
 		c.Data[key] = &dataHolder{}
 		c.Data[key].Value = make(map[string]interface{})
+	} else {
+		if c.Data[key].Expiry != nil {
+			c.heap.Remove(c.Data[key].Expiry.Index, len(c.heap.Data)-1)
+		}
 	}
 	var node *expiry.Node
 
@@ -229,19 +245,37 @@ type tm map[string]int
 tm{}
 */
 
-func (c *Cache) HMset(key string, d interface{}) {
+// HMset takes a Struct/Map as the value , if any other datatype is 
+// Provided it will return an error.
+func (c *Cache) HMset(key string, d interface{}, exp int) error {
 	valType := reflect.TypeOf(d)
+	fieldValues := reflect.ValueOf(d)
 
+	if valType.Kind() == reflect.Ptr {
+		valType = valType.Elem()
+		fieldValues = fieldValues.Elem()
+	}
+	fmt.Println("type", valType.Kind())
 	switch valType.Kind() {
 	case reflect.Struct:
 		{
 			c.Data[key] = &dataHolder{Value: make(map[string]interface{})}
 			for i := 0; i < valType.NumField(); i++ {
-				
+				field := valType.Field(i)
+				value := fieldValues.Field(i).Interface()
+				c.Hset(key, field.Name, value, exp)
 			}
 		}
 	case reflect.Map:
+		{
+			for field, value := range d.(map[string]interface{}) {
+				c.Hset(key, field, value, exp)
+			}
+		}
+	default:
+		return errors.New(ErrHmsetDataType)
 	}
+	return nil
 }
 
 // HgetAll retrives all the fields in a Hash by providing the key
