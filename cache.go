@@ -151,7 +151,7 @@ func (c *Cache) Del(key string) {
 	// 	return
 	// }
 
-	fmt.Println(data.Expiry)
+	// fmt.Println(data.Expiry)
 	if data.Expiry == nil {
 		delete(c.Data, key)
 		c.mu.Unlock()
@@ -245,9 +245,10 @@ type tm map[string]int
 tm{}
 */
 
-// HMset takes a Struct/Map as the value , if any other datatype is 
+// HMset takes a Struct/Map as the value , if any other datatype is
 // Provided it will return an error.
 func (c *Cache) HMset(key string, d interface{}, exp int) error {
+
 	valType := reflect.TypeOf(d)
 	fieldValues := reflect.ValueOf(d)
 
@@ -263,13 +264,17 @@ func (c *Cache) HMset(key string, d interface{}, exp int) error {
 			for i := 0; i < valType.NumField(); i++ {
 				field := valType.Field(i)
 				value := fieldValues.Field(i).Interface()
+				c.mu.Lock()
 				c.Hset(key, field.Name, value, exp)
+				c.mu.Unlock()
 			}
 		}
 	case reflect.Map:
 		{
 			for field, value := range d.(map[string]interface{}) {
+				c.mu.Lock()
 				c.Hset(key, field, value, exp)
+				c.mu.Unlock()
 			}
 		}
 	default:
