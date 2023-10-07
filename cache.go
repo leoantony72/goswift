@@ -2,7 +2,6 @@ package goswift
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
 	"sync"
 	"time"
@@ -256,18 +255,18 @@ func (c *Cache) HMset(key string, d interface{}, exp int) error {
 		valType = valType.Elem()
 		fieldValues = fieldValues.Elem()
 	}
-	fmt.Println("type", valType.Kind())
+	// fmt.Println("type", valType.Kind())
 	switch valType.Kind() {
 	case reflect.Struct:
 		{
+			c.mu.Lock()
 			c.Data[key] = &dataHolder{Value: make(map[string]interface{})}
 			for i := 0; i < valType.NumField(); i++ {
 				field := valType.Field(i)
 				value := fieldValues.Field(i).Interface()
-				c.mu.Lock()
 				c.Hset(key, field.Name, value, exp)
-				c.mu.Unlock()
 			}
+			c.mu.Unlock()
 		}
 	case reflect.Map:
 		{
