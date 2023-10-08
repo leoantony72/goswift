@@ -409,7 +409,6 @@ func TestHmset(t *testing.T) {
 	}
 
 	//invalid data type
-
 	err = c.HMset("meta3", 34, 0)
 	if err == nil {
 		t.Errorf("expected to contain data,gotten nil")
@@ -418,6 +417,23 @@ func TestHmset(t *testing.T) {
 	if err.Error() != ErrHmsetDataType {
 		t.Errorf("expected error %s,gotten: %s", ErrHmsetDataType, err.Error())
 	}
+
+	var wg sync.WaitGroup
+
+	for i := 0; i < 100; i++ {
+		wg.Add(2)
+		go func() {
+			id := uuid.New().String()
+			c.HMset(id, mapdata, 0)
+			wg.Done()
+		}()
+		go func() {
+			id := uuid.New().String()
+			c.HMset(id, mapdata, 0)
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
 
 func TestExist(t *testing.T) {
