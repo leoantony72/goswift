@@ -41,7 +41,7 @@ func main(){
     // Value 0 indicates no expiry
     cache.Set("key", "value", 0)
 
-	val, err := cache.Get("key")
+    val, err := cache.Get("key")
     if err !=nil{
         fmt.Println(err)
         return
