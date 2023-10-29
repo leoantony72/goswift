@@ -561,3 +561,12 @@ func Print(h *expiry.Heap) {
 		fmt.Println(b)
 	}
 }
+
+func TestSnapshot(t *testing.T) {
+	c := NewCache()
+
+	c.Set("dwad", "i know u are bad at coding", 0)
+	c.Get("dawd")
+
+	time.Sleep(time.Second * 15)
+}

@@ -56,12 +56,35 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
+type SnaphotData struct {
+	Value  interface{}
+	Expiry int64
+}
+
+func (c *Cache) AllDatawithExpiry() map[string]SnaphotData {
+	c.mu.Lock()
+
+	data := make(map[string]SnaphotData)
+	for k, v := range c.Data {
+		d := data[k]
+		d.Value = v.Value
+		if v.Expiry == nil {
+			d.Expiry = 0
+		} else {
+			d.Expiry = v.Expiry.Expiry
+		}
+	}
+	c.mu.Unlock()
+	return data
+}
+
 // Initialize a New CacheFunction type which is an Interfaces
 // for all the availabel function
 func NewCache() CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
+	go SnapShotTimer(cache, time.Millisecond)
 	go sweaper(cache, heapInit)
 	return cache
 }
