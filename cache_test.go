@@ -565,8 +565,12 @@ func Print(h *expiry.Heap) {
 func TestSnapshot(t *testing.T) {
 	c := NewCache()
 
-	c.Set("dwad", "i know u are bad at coding", 0)
+	c.Set("bbbbbbb", "code", 0)
+	// c.Set("eeeee", "boi", 0)
+	// c.Set("dwa3d", "i know u are bad at coding", 0)
+	// c.Set("dwad3", "i know u are bad at coding", 0)
+	// c.Set("dwa6d", "i know u are bad at coding", 0)
 	c.Get("dawd")
 
-	time.Sleep(time.Second * 15)
+	time.Sleep(time.Second * 5)
 }

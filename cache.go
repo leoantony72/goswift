@@ -66,13 +66,17 @@ func (c *Cache) AllDatawithExpiry() map[string]SnaphotData {
 
 	data := make(map[string]SnaphotData)
 	for k, v := range c.Data {
-		d := data[k]
-		d.Value = v.Value
+		s := &SnaphotData{}
+		s.Value = v.Value
+
+		// d := data[k]
+		// d.Value = v.Value
 		if v.Expiry == nil {
-			d.Expiry = 0
+			s.Expiry = 0
 		} else {
-			d.Expiry = v.Expiry.Expiry
+			s.Expiry = v.Expiry.Expiry
 		}
+		data[k] = *s
 	}
 	c.mu.Unlock()
 	return data
@@ -84,8 +88,8 @@ func NewCache() CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
-	go SnapShotTimer(cache, time.Millisecond)
 	go sweaper(cache, heapInit)
+	go SnapShotTimer(cache, time.Second)
 	return cache
 }
 
