@@ -31,14 +31,14 @@ func Snapshot(c *Cache) {
 
 	enc := gob.NewEncoder(&buffer)
 	data := c.AllDatawithExpiry()
-	fmt.Println("MapData: ",data)
+	fmt.Println("MapData: ", data)
 
 	if err := enc.Encode(data); err != nil {
 		log.Fatal("err snapshot: ", err)
 	}
 
 	// file, err := os.OpenFile("snapshot.data", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	file,err := os.Create("snapshot.data")
+	file, err := os.Create("snapshot.data")
 	if err != nil {
 		log.Fatal(err)
 		return
@@ -50,6 +50,20 @@ func Snapshot(c *Cache) {
 		log.Fatal(err)
 		return
 	}
-	fmt.Println("count:",n)
+	fmt.Println("count:", n)
+}
 
+func Decoder(c *Cache) {
+	file, err := os.Open("snapshot.data")
+	if err != nil {
+		fmt.Println(err)
+	}
+	defer file.Close()
+
+	data := make(map[string]SnaphotData)
+	decoder := gob.NewDecoder(file)
+
+	if err := decoder.Decode(&data); err != nil {
+		fmt.Println(err)
+	}
 }
