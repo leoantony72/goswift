@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/gob"
 	"fmt"
-	"log"
 	"os"
 	"time"
 )
@@ -12,7 +11,7 @@ import (
 func SnapShotTimer(c *Cache, t time.Duration) {
 	_, err := os.Create("snapshot.data")
 	if err != nil {
-		log.Fatal(err)
+		// log.Fatal(err)
 		return
 	}
 	ticker := time.NewTicker(t)
@@ -21,6 +20,8 @@ func SnapShotTimer(c *Cache, t time.Duration) {
 		select {
 		case <-ticker.C:
 			Snapshot(c)
+		case <-Close:
+			break
 		}
 	}
 
@@ -29,34 +30,39 @@ func SnapShotTimer(c *Cache, t time.Duration) {
 func Snapshot(c *Cache) {
 	var buffer bytes.Buffer
 
+	gob.Register(map[string]interface{}{})
 	enc := gob.NewEncoder(&buffer)
 	data := c.AllDatawithExpiry()
-	fmt.Println("MapData: ", data)
+	// fmt.Println("MapData: ", data)
 
 	if err := enc.Encode(data); err != nil {
-		log.Fatal("err snapshot: ", err)
+		fmt.Println("err snapshot: ", err)
+		return
 	}
 
-	// file, err := os.OpenFile("snapshot.data", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	file, err := os.Create("snapshot.data")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 		return
 	}
 	defer file.Close()
 
-	n, err := file.Write(buffer.Bytes())
+	_, err = file.Write(buffer.Bytes())
 	if err != nil {
-		log.Fatal(err)
+		fmt.Println(err)
 		return
 	}
-	fmt.Println("count:", n)
+	// fmt.Println("count:", n)
 }
 
 func Decoder(c *Cache) {
+	gob.Register(map[string]interface{}{})
 	file, err := os.Open("snapshot.data")
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("file open err: ", err)
+		// os.Create("snapshot.data")
+		// file, _ = os.Open("snapshot.data")
+		return
 	}
 	defer file.Close()
 
@@ -64,6 +70,15 @@ func Decoder(c *Cache) {
 	decoder := gob.NewDecoder(file)
 
 	if err := decoder.Decode(&data); err != nil {
-		fmt.Println(err)
+		fmt.Println("decode err", err)
 	}
+	fmt.Println("decoded data", data)
+	AddToCache(data, c)
+}
+
+func AddToCache(d map[string]SnaphotData, c *Cache) {
+	for k, v := range d {
+		c.Set(k, v.Value, int(v.Expiry))
+	}
+	// fmt.Println("cache Data: ", c.AllDatawithExpiry())
 }
