@@ -51,6 +51,23 @@ func main(){
 
 ```
 
+## Disk Save
+
+### Snapshot
+
+```go
+opt := goswift.CacheOptions{
+		EnableSnapshots:  true,
+		SnapshotInterval: time.Second*5,
+	}
+c := goswift.NewCache(opt)
+```
+> **_NOTE:_** If the **EnableSnapshot** is **false**, Data saved in the file will not imported
+
+This will take a snapshot of the Data Every 5sec and saves it into a ***Snapshot.data*** file.
+
+> **_NOTE:_** Don't delete the ***Snapshot.data*** File <br>
+
 ## Usage
 
 ```go

@@ -555,6 +555,5 @@ func TestSnapshotTimer(t *testing.T) {
 	c := NewCache()
 
 	go SnapShotTimer(c.(*Cache), time.Millisecond)
-
 	Close <- "stop"
 }
