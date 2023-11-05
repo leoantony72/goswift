@@ -9,6 +9,7 @@ High-performance, concurrent embedded caching library for Go applications with s
 - Update command
 - Exists command
 - Support for TTL
+- Support for Disk Save(Snapshots)
 - Support Hash Data type Hset, Hget, HgetAll, HMset
 - Safe Locking
 
@@ -64,10 +65,29 @@ c := goswift.NewCache(opt)
 ```
 > **_NOTE:_** If the **EnableSnapshot** is **false**, Data saved in the file will not imported
 
-This will take a snapshot of the Data Every 5sec and saves it into a ***Snapshot.data*** file.
+This will take a snapshot of the Data Every 5sec and saves it into a ***Snapshot.data*** file. By default Snapshots are disabled and if the SnapshotInterval is not provided default value is **5seconds**.
 
 > **_NOTE:_** Don't delete the ***Snapshot.data*** File <br>
 
+## Error Handling
+```go
+const (
+	ErrKeyNotFound   = "key does not Exists"
+	ErrFieldNotFound = "field does not Exists"
+	ErrNotHashvalue  = "not a Hash value/table"
+	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
+)
+```
+These are the common Errors that may occur while writing the code. These Varible provide you a clear and easy **Error** comparison method to determine errors.
+
+```go
+data,err := cache.Get("key")
+if err != nil {
+	if err.Error() == goswift.ErrKeyNotFound {
+        //do something
+}
+}    
+```
 ## Usage
 
 ```go
