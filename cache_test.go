@@ -500,55 +500,6 @@ func TestDeleteExpiredKeys(t *testing.T) {
 
 }
 
-// func TestCache(t *testing.T) {
-// 	c := goswift.NewCache()
-
-// 	fmt.Println(time.Now().Unix())
-// 	c.Set("leo", 23000, "kinglol")
-// 	c.Set("name", 9000, "leoantony")
-// 	c.Set("jsondata", 6000, "THIS IS A TEST ")
-// 	exp := 3000
-// 	var wg sync.WaitGroup
-// 	for i := 0; i < 1000; i++ {
-// 		wg.Add(3)
-// 		go AddNode(c, exp, &wg)
-// 		go AddNode(c, exp, &wg)
-// 		go AddNode(c, exp, &wg)
-// 	}
-// 	c.Set("idk", 2000, "THIS IS A TEST ")
-// 	c.Set("boiz", 7000, "THIS IS A TEST ")
-// 	c.Set("no name", 10000, "THIS IS A TEST ")
-
-// 	wg.Wait()
-
-// 	PrintALL(c)
-
-// 	c.Del("no name")
-// 	interval := 1 * time.Second
-// 	// fmt.Println(interval)
-// 	ticker := time.NewTicker(interval)
-// 	defer ticker.Stop()
-// 	for {
-// 		select {
-// 		case <-ticker.C:
-// 			PrintALL(c)
-// 			PrintALLH(c)
-// 		}
-// 	}
-// }
-
-// func PrintALLH(c CacheFunction) {
-// 	d := c.AllDataHeap()
-// 	// fmt.Println(d)
-// 	counTer := 0
-// 	for s, v := range d {
-// 		fmt.Println(s, v)
-// 		counTer += 1
-// 	}
-// 	fmt.Println("total Heap Data: ", counTer)
-// 	fmt.Println("----------------------")
-// }
-
 func AddNode(c CacheFunction, exp int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	key := uuid.New()
@@ -560,4 +511,49 @@ func Print(h *expiry.Heap) {
 	for _, b := range h.Data {
 		fmt.Println(b)
 	}
+}
+
+func TestSnapshotWithoutOpt(t *testing.T) {
+	// opt := CacheOptions{
+	// 	EnableSnapshots:  true,
+	// 	SnapshotInterval: time.Second,
+	// }
+	c := NewCache()
+
+	c.Set("user:1", "bob", 0)
+	c.Hset("user:2", "name", "jhon", 0)
+	c.Set("user:3", "raju", 3000000)
+
+	Snapshot(c.(*Cache))
+	c.Del("user:1")
+	c.Del("user:2")
+	c.Del("user:3")
+
+	Decoder(c.(*Cache))
+
+	fmt.Println(c.AllData())
+	if !c.Exists("user:1") || !c.Exists("user:2") || !c.Exists("user:3") {
+		t.Errorf("Key does not exists, Snapshot does not take place")
+		return
+	}
+
+	// time.Sleep(time.Second * 5)
+}
+
+func TestSnapshotWithOpt(t *testing.T) {
+	opt := CacheOptions{
+		EnableSnapshots:  true,
+		SnapshotInterval: time.Second,
+	}
+	c := NewCache(opt)
+	c.Set("user:1", "bob", 0)
+	c.Hset("user:2", "name", "jhon", 0)
+	c.Set("user:3", "raju", 3000000)
+}
+
+func TestSnapshotTimer(t *testing.T) {
+	c := NewCache()
+
+	go SnapShotTimer(c.(*Cache), time.Millisecond)
+	Close <- "stop"
 }

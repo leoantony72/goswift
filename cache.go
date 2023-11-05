@@ -16,6 +16,8 @@ const (
 	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 
+var Close chan string
+
 type Cache struct {
 	Data   map[string]*dataHolder
 	length int
@@ -28,17 +30,18 @@ type dataHolder struct {
 	Expiry *expiry.Node
 }
 
-// func (c *Cache) AllDataHeap() []*expiry.Node {
-// 	c.mu.Lock()
-// 	// var h []*expiry.Heap
-// 	// d := c.heap.Data
-// 	dst := make([]*expiry.Node, len(c.heap.Data))
+/*
+func (c *Cache) AllDataHeap() []*expiry.Node {
+	c.mu.Lock()
+	// var h []*expiry.Heap
+	// d := c.heap.Data
+	dst := make([]*expiry.Node, len(c.heap.Data))
 
-// 	copy(dst, c.heap.Data)
-// 	c.mu.Unlock()
-// 	return dst
-// }
-
+	copy(dst, c.heap.Data)
+	c.mu.Unlock()
+	return dst
+}
+*/
 // returns all data from the map with both key and value,
 // expiry data will not be returned, returned data will be a
 // copy of the original data
@@ -56,14 +59,69 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
+type SnaphotData struct {
+	Value  interface{}
+	Expiry int64
+}
+
+func (c *Cache) AllDatawithExpiry() map[string]SnaphotData {
+	c.mu.Lock()
+
+	data := make(map[string]SnaphotData)
+	for k, v := range c.Data {
+		s := &SnaphotData{}
+		s.Value = v.Value
+
+		// d := data[k]
+		// d.Value = v.Value
+		if v.Expiry == nil {
+			s.Expiry = 0
+		} else {
+			s.Expiry = v.Expiry.Expiry
+		}
+		data[k] = *s
+	}
+	c.mu.Unlock()
+	return data
+}
+
+type CacheOptions struct {
+	EnableSnapshots  bool
+	SnapshotInterval time.Duration
+}
+
 // Initialize a New CacheFunction type which is an Interfaces
 // for all the availabel function
-func NewCache() CacheFunction {
+func NewCache(options ...CacheOptions) CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
+
+	defaultOption := CacheOptions{
+		EnableSnapshots:  false,
+		SnapshotInterval: time.Second * 5,
+	}
+	if options != nil {
+		defaultOption = mergeOptions(defaultOption, options[0])
+	}
+
+	if defaultOption.EnableSnapshots {
+		Decoder(cache)
+		go SnapShotTimer(cache, time.Second)
+	}
 	go sweaper(cache, heapInit)
+	Close = make(chan string)
 	return cache
+}
+
+func mergeOptions(defaultOption CacheOptions, customOption CacheOptions) CacheOptions {
+	if customOption.EnableSnapshots {
+		defaultOption.EnableSnapshots = true
+		if customOption.SnapshotInterval != 0 {
+			defaultOption.SnapshotInterval = customOption.SnapshotInterval
+		}
+	}
+	return defaultOption
 }
 
 func testHeaps(c *Cache) []*expiry.Node {
