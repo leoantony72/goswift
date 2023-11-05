@@ -57,7 +57,7 @@ func decoder(c *Cache) {
 	gob.Register(map[string]interface{}{})
 	file, err := os.Open("snapshot.data")
 	if err != nil {
-		fmt.Println("file open err: ", err)
+		// fmt.Println("file open err: ", err)
 		// os.Create("snapshot.data")
 		// file, _ = os.Open("snapshot.data")
 		return
