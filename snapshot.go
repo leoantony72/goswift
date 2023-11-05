@@ -57,12 +57,51 @@ func decoder(c *Cache) {
 	gob.Register(map[string]interface{}{})
 	file, err := os.Open("snapshot.data")
 	if err != nil {
-		// fmt.Println("file open err: ", err)
-		// os.Create("snapshot.data")
-		// file, _ = os.Open("snapshot.data")
+		os.Create("snapshot.data")
 		return
 	}
 	defer file.Close()
+
+	// Check if the file is empty before decoding
+	fileInfo, err := file.Stat()
+	if err != nil {
+		// fmt.Println("file stat error:", err)
+		return
+	}
+	if fileInfo.Size() == 0 {
+		// fmt.Println("File is empty. Nothing to decode.")
+		return
+	}
+
+	data := make(map[string]snaphotData)
+	decoder := gob.NewDecoder(file)
+
+	if err := decoder.Decode(&data); err != nil {
+		// fmt.Println("decode err", err)
+		return
+	}
+	addToCache(data, c)
+}
+
+func testdecoder(c *Cache) {
+	gob.Register(map[string]interface{}{})
+	file, err := os.Open("snapshot.data")
+	if err != nil {
+		os.Create("snapshot.data")
+		return
+	}
+	defer file.Close()
+
+	// Check if the file is empty before decoding
+	fileInfo, err := file.Stat()
+	if err != nil {
+		// fmt.Println("file stat error:", err)
+		return
+	}
+	if fileInfo.Size() == 0 {
+		// fmt.Println("File is empty. Nothing to decode.")
+		return
+	}
 
 	data := make(map[string]snaphotData)
 	decoder := gob.NewDecoder(file)
@@ -70,9 +109,9 @@ func decoder(c *Cache) {
 	if err := decoder.Decode(&data); err != nil {
 		fmt.Println("decode err", err)
 	}
-	addToCache(data, c)
+	// addToCache(data, c)
+	fmt.Println(data)
 }
-
 func addToCache(d map[string]snaphotData, c *Cache) {
 	for k, v := range d {
 		c.Set(k, v.Value, int(v.Expiry))
