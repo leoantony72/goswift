@@ -524,12 +524,12 @@ func TestSnapshotWithoutOpt(t *testing.T) {
 	c.Hset("user:2", "name", "jhon", 0)
 	c.Set("user:3", "raju", 3000000)
 
-	Snapshot(c.(*Cache))
+	snapshot(c.(*Cache))
 	c.Del("user:1")
 	c.Del("user:2")
 	c.Del("user:3")
 
-	Decoder(c.(*Cache))
+	decoder(c.(*Cache))
 
 	fmt.Println(c.AllData())
 	if !c.Exists("user:1") || !c.Exists("user:2") || !c.Exists("user:3") {
@@ -554,6 +554,6 @@ func TestSnapshotWithOpt(t *testing.T) {
 func TestSnapshotTimer(t *testing.T) {
 	c := NewCache()
 
-	go SnapShotTimer(c.(*Cache), time.Millisecond)
-	Close <- "stop"
+	go snapShotTimer(c.(*Cache), time.Millisecond)
+	close <- "stop"
 }

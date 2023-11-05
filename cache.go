@@ -16,7 +16,7 @@ const (
 	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 
-var Close chan string
+var close chan string
 
 type Cache struct {
 	Data   map[string]*dataHolder
@@ -30,18 +30,6 @@ type dataHolder struct {
 	Expiry *expiry.Node
 }
 
-/*
-func (c *Cache) AllDataHeap() []*expiry.Node {
-	c.mu.Lock()
-	// var h []*expiry.Heap
-	// d := c.heap.Data
-	dst := make([]*expiry.Node, len(c.heap.Data))
-
-	copy(dst, c.heap.Data)
-	c.mu.Unlock()
-	return dst
-}
-*/
 // returns all data from the map with both key and value,
 // expiry data will not be returned, returned data will be a
 // copy of the original data
@@ -59,17 +47,17 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
-type SnaphotData struct {
+type snaphotData struct {
 	Value  interface{}
 	Expiry int64
 }
 
-func (c *Cache) AllDatawithExpiry() map[string]SnaphotData {
+func (c *Cache) AllDatawithExpiry() map[string]snaphotData {
 	c.mu.Lock()
 
-	data := make(map[string]SnaphotData)
+	data := make(map[string]snaphotData)
 	for k, v := range c.Data {
-		s := &SnaphotData{}
+		s := &snaphotData{}
 		s.Value = v.Value
 
 		// d := data[k]
@@ -106,11 +94,11 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	}
 
 	if defaultOption.EnableSnapshots {
-		Decoder(cache)
-		go SnapShotTimer(cache, time.Second)
+		decoder(cache)
+		go snapShotTimer(cache, time.Second)
 	}
 	go sweaper(cache, heapInit)
-	Close = make(chan string)
+	close = make(chan string)
 	return cache
 }
 
@@ -363,3 +351,17 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	}
 	return nil, errors.New(ErrKeyNotFound)
 }
+
+
+/*
+func (c *Cache) AllDataHeap() []*expiry.Node {
+	c.mu.Lock()
+	// var h []*expiry.Heap
+	// d := c.heap.Data
+	dst := make([]*expiry.Node, len(c.heap.Data))
+
+	copy(dst, c.heap.Data)
+	c.mu.Unlock()
+	return dst
+}
+*/
