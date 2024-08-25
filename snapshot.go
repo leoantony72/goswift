@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SnapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
+func snapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 	_, err := os.Create("snapshot.data")
 	if err != nil {
 		// log.Fatal(err)
@@ -19,7 +19,7 @@ func SnapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			Snapshot(c)
+			snapshot(c)
 		case <-Close:
 			return
 		}
@@ -27,13 +27,12 @@ func SnapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 
 }
 
-func Snapshot(c *Cache) {
+func snapshot(c *Cache) {
 	var buffer bytes.Buffer
 
 	gob.Register(map[string]interface{}{})
 	enc := gob.NewEncoder(&buffer)
 	data := c.AllDatawithExpiry()
-	// fmt.Println("MapData: ", data)
 
 	if err := enc.Encode(data); err != nil {
 		fmt.Println("err snapshot: ", err)
@@ -52,31 +51,76 @@ func Snapshot(c *Cache) {
 		fmt.Println(err)
 		return
 	}
-	// fmt.Println("count:", n)
 }
-
-func Decoder(c *Cache) {
+func decoder(c *Cache) {
 	gob.Register(map[string]interface{}{})
 	file, err := os.Open("snapshot.data")
 	if err != nil {
-		fmt.Println("file open err: ", err)
-		// os.Create("snapshot.data")
-		// file, _ = os.Open("snapshot.data")
+		if os.IsNotExist(err) {
+			file, err = os.Create("snapshot.data")
+			if err != nil {
+				fmt.Println("Error creating file:", err)
+				return
+			}
+		} else {
+			fmt.Println("Error opening file:", err)
+			return
+		}
+	}
+	defer file.Close()
+
+	// Check if the file is empty
+	fileInfo, err := file.Stat()
+	if err != nil {
+		fmt.Println("Error getting file info:", err)
+		return
+	}
+	if fileInfo.Size() == 0 {
+		fmt.Println("File is empty, nothing to decode")
+		return
+	}
+
+	data := make(map[string]snapShotData)
+	decoder := gob.NewDecoder(file)
+
+	if err := decoder.Decode(&data); err != nil {
+		fmt.Println("Decode error:", err)
+		return
+	}
+
+	addToCache(data, c)
+}
+
+func testdecoder() {
+	gob.Register(map[string]interface{}{})
+	file, err := os.Open("snapshot.data")
+	if err != nil {
+		os.Create("snapshot.data")
 		return
 	}
 	defer file.Close()
 
-	data := make(map[string]SnapShotData)
+	// Check if the file is empty before decoding
+	fileInfo, err := file.Stat()
+	if err != nil {
+		// fmt.Println("file stat error:", err)
+		return
+	}
+	if fileInfo.Size() == 0 {
+		// fmt.Println("File is empty. Nothing to decode.")
+		return
+	}
+
+	data := make(map[string]snapShotData)
 	decoder := gob.NewDecoder(file)
 
 	if err := decoder.Decode(&data); err != nil {
 		fmt.Println("decode err", err)
 	}
-	fmt.Println("decoded data", data)
-	AddToCache(data, c)
+	// addToCache(data, c)
+	fmt.Println(data)
 }
-
-func AddToCache(d map[string]SnapShotData, c *Cache) {
+func addToCache(d map[string]snapShotData, c *Cache) {
 	for k, v := range d {
 		c.Set(k, v.Value, int(v.Expiry))
 	}

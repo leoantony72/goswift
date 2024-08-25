@@ -59,29 +59,28 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
-type SnapShotData struct {
+type snapShotData struct {
 	Value  interface{}
 	Expiry int64
 }
 
-func (c *Cache) AllDatawithExpiry() map[string]SnapShotData {
+func (c *Cache) AllDatawithExpiry() map[string]snapShotData {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 
-	data := make(map[string]SnapShotData)
+	data := make(map[string]snapShotData)
 	for k, v := range c.Data {
-		s := &SnapShotData{}
-		s.Value = v.Value
+		s := snapShotData{
+			Value: v.Value,
+		}
 
-		// d := data[k]
-		// d.Value = v.Value
 		if v.Expiry == nil {
 			s.Expiry = 0
 		} else {
 			s.Expiry = v.Expiry.Expiry
 		}
-		data[k] = *s
+		data[k] = s
 	}
-	c.mu.Unlock()
 	return data
 }
 
@@ -107,8 +106,8 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	}
 
 	if defaultOption.EnableSnapshots {
-		Decoder(cache)
-		go SnapShotTimer(cache, time.Second,Close)
+		decoder(cache)
+		go snapShotTimer(cache, time.Second,Close)
 	}
 	go sweaper(cache, heapInit)
 	return cache
