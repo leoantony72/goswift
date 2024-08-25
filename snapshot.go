@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func SnapShotTimer(c *Cache, t time.Duration) {
+func SnapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 	_, err := os.Create("snapshot.data")
 	if err != nil {
 		// log.Fatal(err)
@@ -21,7 +21,7 @@ func SnapShotTimer(c *Cache, t time.Duration) {
 		case <-ticker.C:
 			Snapshot(c)
 		case <-Close:
-			break
+			return
 		}
 	}
 

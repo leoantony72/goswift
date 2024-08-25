@@ -553,7 +553,7 @@ func TestSnapshotWithOpt(t *testing.T) {
 
 func TestSnapshotTimer(t *testing.T) {
 	c := NewCache()
-
-	go SnapShotTimer(c.(*Cache), time.Millisecond)
-	Close <- "stop"
+	Close := make(chan struct{})
+	go SnapShotTimer(c.(*Cache), time.Millisecond,Close)
+	close(Close)
 }

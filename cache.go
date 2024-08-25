@@ -16,7 +16,7 @@ const (
 	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 
-var Close chan string
+// var Close chan struct{}
 
 type Cache struct {
 	Data   map[string]*dataHolder
@@ -96,6 +96,7 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
+	Close := make(chan struct{})
 
 	defaultOption := CacheOptions{
 		EnableSnapshots:  false,
@@ -107,10 +108,9 @@ func NewCache(options ...CacheOptions) CacheFunction {
 
 	if defaultOption.EnableSnapshots {
 		Decoder(cache)
-		go SnapShotTimer(cache, time.Second)
+		go SnapShotTimer(cache, time.Second,Close)
 	}
 	go sweaper(cache, heapInit)
-	Close = make(chan string)
 	return cache
 }
 
