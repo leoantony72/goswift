@@ -291,11 +291,7 @@ func TestHGet(t *testing.T) {
 }
 
 func TestHgetAll(t *testing.T) {
-	opt := CacheOptions{
-		EnableSnapshots:  true,
-		SnapshotInterval: time.Second,
-	}
-	c := NewCache(opt)
+	c := NewCache()
 
 	//key does not exists
 	key := "users:bob"
@@ -482,11 +478,11 @@ func TestGetAllData(t *testing.T) {
 func TestDeleteExpiredKeys(t *testing.T) {
 	c := NewCache().(*Cache)
 
-	c.Set("key1", "t1", 100)
-	c.Set("key2", "t1", 200)
-	c.Set("key3", "t1", 3200)
+	c.Set("key1", "t1", 1000)
+	c.Set("key2", "t1", 2000)
+	c.Set("key3", "t1", 10000)
 
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Second * 3)
 	testDeleteExpiredKeys(c)
 
 	if c.Exists("key1") || c.Exists("key2") {
@@ -528,12 +524,12 @@ func TestSnapshotWithoutOpt(t *testing.T) {
 	c.Hset("user:2", "name", "jhon", 0)
 	c.Set("user:3", "raju", 3000000)
 
-	snapshot(c.(*Cache))
+	Snapshot(c.(*Cache))
 	c.Del("user:1")
 	c.Del("user:2")
 	c.Del("user:3")
 
-	decoder(c.(*Cache))
+	Decoder(c.(*Cache))
 
 	fmt.Println(c.AllData())
 	if !c.Exists("user:1") || !c.Exists("user:2") || !c.Exists("user:3") {
@@ -557,22 +553,7 @@ func TestSnapshotWithOpt(t *testing.T) {
 
 func TestSnapshotTimer(t *testing.T) {
 	c := NewCache()
-
-	go snapShotTimer(c.(*Cache), time.Millisecond)
-	close <- "stop"
-}
-
-func TestDecoder(t *testing.T) {
-	opt := CacheOptions{
-		EnableSnapshots:  true,
-		SnapshotInterval: time.Millisecond,
-	}
-	c := NewCache(opt)
-
-	c.Set("u1","lol",0)
-	c.Set("u2","lol",0)
-	c.Set("u3","lol",0)
-	c.Set("u4","lol",0)
-	time.Sleep(time.Millisecond*1000)
-	testdecoder(c.(*Cache))
+	Close := make(chan struct{})
+	go SnapShotTimer(c.(*Cache), time.Millisecond,Close)
+	close(Close)
 }

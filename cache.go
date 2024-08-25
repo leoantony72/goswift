@@ -16,7 +16,7 @@ const (
 	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 
-var close chan string
+// var Close chan struct{}
 
 type Cache struct {
 	Data   map[string]*dataHolder
@@ -30,6 +30,18 @@ type dataHolder struct {
 	Expiry *expiry.Node
 }
 
+/*
+func (c *Cache) AllDataHeap() []*expiry.Node {
+	c.mu.Lock()
+	// var h []*expiry.Heap
+	// d := c.heap.Data
+	dst := make([]*expiry.Node, len(c.heap.Data))
+
+	copy(dst, c.heap.Data)
+	c.mu.Unlock()
+	return dst
+}
+*/
 // returns all data from the map with both key and value,
 // expiry data will not be returned, returned data will be a
 // copy of the original data
@@ -47,17 +59,17 @@ func (c *Cache) AllData() (map[string]interface{}, int) {
 	return dataMap, counter
 }
 
-type snaphotData struct {
+type SnapShotData struct {
 	Value  interface{}
 	Expiry int64
 }
 
-func (c *Cache) AllDatawithExpiry() map[string]snaphotData {
+func (c *Cache) AllDatawithExpiry() map[string]SnapShotData {
 	c.mu.Lock()
 
-	data := make(map[string]snaphotData)
+	data := make(map[string]SnapShotData)
 	for k, v := range c.Data {
-		s := &snaphotData{}
+		s := &SnapShotData{}
 		s.Value = v.Value
 
 		// d := data[k]
@@ -84,6 +96,7 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	dataMap := make(map[string]*dataHolder)
 	heapInit := expiry.Init()
 	cache := &Cache{Data: dataMap, length: 0, heap: heapInit}
+	Close := make(chan struct{})
 
 	defaultOption := CacheOptions{
 		EnableSnapshots:  false,
@@ -94,11 +107,10 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	}
 
 	if defaultOption.EnableSnapshots {
-		decoder(cache)
-		go snapShotTimer(cache, time.Second)
+		Decoder(cache)
+		go SnapShotTimer(cache, time.Second,Close)
 	}
 	go sweaper(cache, heapInit)
-	close = make(chan string)
 	return cache
 }
 
@@ -351,17 +363,3 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 	}
 	return nil, errors.New(ErrKeyNotFound)
 }
-
-
-/*
-func (c *Cache) AllDataHeap() []*expiry.Node {
-	c.mu.Lock()
-	// var h []*expiry.Heap
-	// d := c.heap.Data
-	dst := make([]*expiry.Node, len(c.heap.Data))
-
-	copy(dst, c.heap.Data)
-	c.mu.Unlock()
-	return dst
-}
-*/
