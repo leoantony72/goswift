@@ -121,6 +121,9 @@ func mergeOptions(defaultOption CacheOptions, customOption CacheOptions) CacheOp
 		if customOption.SnapshotInterval != 0 {
 			defaultOption.SnapshotInterval = customOption.SnapshotInterval
 		}
+		if len(customOption.SnapshotFileName) > 0 {
+			defaultOption.SnapshotFileName = customOption.SnapshotFileName
+		}
 	}
 	return defaultOption
 }
