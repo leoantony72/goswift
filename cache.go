@@ -87,6 +87,7 @@ func (c *Cache) AllDatawithExpiry() map[string]snapShotData {
 type CacheOptions struct {
 	EnableSnapshots  bool
 	SnapshotInterval time.Duration
+	SnapshotFileName string
 }
 
 // Initialize a New CacheFunction type which is an Interfaces
@@ -100,14 +101,15 @@ func NewCache(options ...CacheOptions) CacheFunction {
 	defaultOption := CacheOptions{
 		EnableSnapshots:  false,
 		SnapshotInterval: time.Second * 5,
+		SnapshotFileName: "snapshot.data",
 	}
 	if options != nil {
 		defaultOption = mergeOptions(defaultOption, options[0])
 	}
 
 	if defaultOption.EnableSnapshots {
-		decoder(cache)
-		go snapShotTimer(cache, time.Second,Close)
+		decoder(cache, defaultOption.SnapshotFileName)
+		go snapShotTimer(cache, defaultOption.SnapshotInterval, defaultOption.SnapshotFileName, Close)
 	}
 	go sweaper(cache, heapInit)
 	return cache
