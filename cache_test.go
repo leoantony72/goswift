@@ -528,13 +528,13 @@ func TestSnapshotWithoutOpt(t *testing.T) {
 	c.Hset("user:2", "name", "jhon", 0)
 	c.Set("user:3", "raju", 3000000)
 
-	snapshot(c.(*Cache))
+	snapshot(c.(*Cache), "snapshot.data")
 	c.Del("user:1")
 	c.Del("user:2")
 	c.Del("user:3")
 	fmt.Println(c.AllData())
 
-	decoder(c.(*Cache))
+	decoder(c.(*Cache), "snapshot.data")
 
 	fmt.Println(c.AllData())
 	if !c.Exists("user:1") || !c.Exists("user:2") || !c.Exists("user:3") {
@@ -549,6 +549,7 @@ func TestSnapshotWithOpt(t *testing.T) {
 	opt := CacheOptions{
 		EnableSnapshots:  true,
 		SnapshotInterval: time.Second,
+		SnapshotFileName: "snapshot.data",
 	}
 	c := NewCache(opt)
 	c.Set("user:1", "bob", 0)
@@ -560,7 +561,7 @@ func TestSnapshotTimer(t *testing.T) {
 	c := NewCache()
 
 	Close := make(chan struct{})
-	go snapShotTimer(c.(*Cache), time.Millisecond,Close)
+	go snapShotTimer(c.(*Cache), time.Millisecond, "snapshot.data", Close)
 	close(Close)
 }
 
@@ -571,10 +572,10 @@ func TestDecoder(t *testing.T) {
 	}
 	c := NewCache(opt)
 
-	c.Set("u1","lol",0)
-	c.Set("u2","lol",0)
-	c.Set("u3","lol",0)
-	c.Set("u4","lol",0)
-	time.Sleep(time.Millisecond*1000)
+	c.Set("u1", "lol", 0)
+	c.Set("u2", "lol", 0)
+	c.Set("u3", "lol", 0)
+	c.Set("u4", "lol", 0)
+	time.Sleep(time.Millisecond * 1000)
 	testdecoder()
 }

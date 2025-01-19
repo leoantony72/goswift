@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-func snapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
-	_, err := os.Create("snapshot.data")
+func snapShotTimer(c *Cache, t time.Duration, fileName string, Close chan struct{}) {
+	_, err := os.Create(fileName)
 	if err != nil {
 		// log.Fatal(err)
 		return
@@ -19,7 +19,7 @@ func snapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 	for {
 		select {
 		case <-ticker.C:
-			snapshot(c)
+			snapshot(c, fileName)
 		case <-Close:
 			return
 		}
@@ -27,7 +27,7 @@ func snapShotTimer(c *Cache, t time.Duration, Close chan struct{}) {
 
 }
 
-func snapshot(c *Cache) {
+func snapshot(c *Cache, fileName string) {
 	var buffer bytes.Buffer
 
 	gob.Register(map[string]interface{}{})
@@ -39,7 +39,7 @@ func snapshot(c *Cache) {
 		return
 	}
 
-	file, err := os.Create("snapshot.data")
+	file, err := os.Create(fileName)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -52,7 +52,7 @@ func snapshot(c *Cache) {
 		return
 	}
 }
-func decoder(c *Cache) {
+func decoder(c *Cache, fileName string) {
 	gob.Register(map[string]interface{}{})
 	file, err := os.Open("snapshot.data")
 	if err != nil {
