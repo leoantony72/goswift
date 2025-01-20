@@ -9,11 +9,11 @@ import (
 	"github.com/leoantony72/goswift/expiry"
 )
 
-const (
-	ErrKeyNotFound   = "key does not Exists"
-	ErrFieldNotFound = "field does not Exists"
-	ErrNotHashvalue  = "not a Hash value/table"
-	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
+var (
+	ErrKeyNotFound   = errors.New("key does not exist")
+	ErrFieldNotFound = errors.New("field does not exist")
+	ErrNotHashvalue  = errors.New("not a hash value/table")
+	ErrHmsetDataType = errors.New("invalid data type, expected struct/map")
 )
 
 // var Close chan struct{}
@@ -184,7 +184,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 	data, ok := c.Data[key]
 	c.mu.RUnlock()
 	if !ok {
-		return nil, errors.New(ErrKeyNotFound)
+		return nil, ErrKeyNotFound
 	}
 	if data.Expiry != nil {
 		if data.Expiry.Expiry > time.Now().Unix() {
@@ -193,7 +193,7 @@ func (c *Cache) Get(key string) (interface{}, error) {
 		c.mu.Lock()
 		delete(c.Data, key)
 		c.mu.Unlock()
-		return nil, errors.New(ErrKeyNotFound)
+		return nil, ErrKeyNotFound
 	}
 	return data.Value, nil
 }
@@ -229,7 +229,7 @@ func (c *Cache) Del(key string) {
 // New data will expire at the same time as the prev Key.
 func (c *Cache) Update(key string, val interface{}) error {
 	if !c.Exists(key) {
-		return errors.New(ErrKeyNotFound)
+		return ErrKeyNotFound
 	}
 
 	c.mu.Lock()
@@ -269,7 +269,7 @@ func (c *Cache) Hset(key, field string, value interface{}, exp int) {
 // Retrieves the field value of hash by key and field name
 func (c *Cache) HGet(key, field string) (interface{}, error) {
 	if !c.Exists(key) {
-		return nil, errors.New(ErrKeyNotFound)
+		return nil, ErrKeyNotFound
 	}
 	c.mu.RLock()
 	data := c.Data[key]
@@ -284,13 +284,13 @@ func (c *Cache) HGet(key, field string) (interface{}, error) {
 				c.mu.Lock()
 				delete(c.Data, key)
 				c.mu.Unlock()
-				return nil, errors.New(ErrKeyNotFound)
+				return nil, ErrKeyNotFound
 			}
 			return dataf, nil
 		}
-		return nil, errors.New(ErrFieldNotFound)
+		return nil, ErrFieldNotFound
 	}
-	return nil, errors.New(ErrNotHashvalue)
+	return nil, ErrNotHashvalue
 
 }
 
@@ -339,7 +339,7 @@ func (c *Cache) HMset(key string, d interface{}, exp int) error {
 			}
 		}
 	default:
-		return errors.New(ErrHmsetDataType)
+		return ErrHmsetDataType
 	}
 	return nil
 }
@@ -359,11 +359,11 @@ func (c *Cache) HGetAll(key string) (map[string]interface{}, error) {
 				c.mu.Lock()
 				delete(c.Data, key)
 				c.mu.Unlock()
-				return nil, errors.New(ErrKeyNotFound)
+				return nil, ErrKeyNotFound
 			}
 			return mpData, nil
 		}
-		return nil, errors.New(ErrNotHashvalue)
+		return nil, ErrNotHashvalue
 	}
-	return nil, errors.New(ErrKeyNotFound)
+	return nil, ErrKeyNotFound
 }

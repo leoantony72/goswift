@@ -63,13 +63,15 @@ opt := goswift.CacheOptions{
 	}
 c := goswift.NewCache(opt)
 ```
+
 > **_NOTE:_** If the **EnableSnapshot** is **false**, Data saved in the file will not imported
 
-This will take a snapshot of the Data Every 5sec and saves it into a ***Snapshot.data*** file. By default Snapshots are disabled and if the SnapshotInterval is not provided default value is **5seconds**.
+This will take a snapshot of the Data Every 5sec and saves it into a **_Snapshot.data_** file. By default Snapshots are disabled and if the SnapshotInterval is not provided default value is **5seconds**.
 
-> **_NOTE:_** Don't delete the ***Snapshot.data*** File <br>
+> **_NOTE:_** Don't delete the **_Snapshot.data_** File <br>
 
 ## Error Handling
+
 ```go
 const (
 	ErrKeyNotFound   = "key does not Exists"
@@ -78,6 +80,7 @@ const (
 	ErrHmsetDataType = "invalid data type, Expected Struct/Map"
 )
 ```
+
 These are the common Errors that may occur while writing the code. These Varible provide you a clear and easy **Error** comparison method to determine errors.
 
 ```go
@@ -86,8 +89,9 @@ if err != nil {
 	if err.Error() == goswift.ErrKeyNotFound {
         //do something
 }
-}    
+}
 ```
+
 ## Usage
 
 ```go

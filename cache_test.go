@@ -1,6 +1,7 @@
 package goswift
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -11,11 +12,6 @@ import (
 	"github.com/leoantony72/goswift/expiry"
 )
 
-// const (
-// 	ErrKeyNotFound  = "key does not Exists"
-// 	ErrNotHashvalue = "not a Hash value/table"
-// )
-
 func TestSet(t *testing.T) {
 	cache := NewCache()
 
@@ -25,15 +21,24 @@ func TestSet(t *testing.T) {
 
 	getValue, err := cache.Get(key)
 	if err != nil {
-		if err.Error() == ErrKeyNotFound {
-			t.Errorf("key `%s`: %s", key, ErrKeyNotFound)
+		// Use errors.Is for error comparison. issue:#5
+		if errors.Is(err, ErrKeyNotFound) {
+			t.Errorf("Key `%s` not found: %v", key, ErrKeyNotFound)
 			return
 		}
+		// Report unexpected errors
+		t.Errorf("Unexpected error for key `%s`: %v", key, err)
 		return
 	}
-	if getValue.(string) != val {
-		t.Errorf("val not the same")
+
+	// Ensure the value matches the expected value
+	retrievedValue, ok := getValue.(string)
+	if !ok {
+		t.Errorf("Expected string value for key `%s`, got type `%T`", key, getValue)
 		return
+	}
+	if retrievedValue != val {
+		t.Errorf("Value mismatch: expected `%s`, got `%s`", val, retrievedValue)
 	}
 }
 
@@ -74,7 +79,7 @@ func TestGet(t *testing.T) {
 	c.Set("country", "India", 100)
 	_, err = c.Get("country")
 	if err != nil {
-		if err.Error() != ErrKeyNotFound {
+		if !errors.Is(err,ErrKeyNotFound){
 			t.Errorf("key %s Should be Expired", "country")
 			return
 		}
@@ -120,7 +125,7 @@ func TestUpdate(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrKeyNotFound {
+	if !errors.Is(err,ErrKeyNotFound){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
@@ -221,7 +226,7 @@ func TestHset(t *testing.T) {
 		t.Errorf("expected error: %s, Gotten: nil", ErrKeyNotFound)
 		return
 	}
-	if err.Error() != ErrKeyNotFound {
+	if !errors.Is(err,ErrKeyNotFound){
 		t.Errorf("expected error: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
@@ -254,7 +259,7 @@ func TestHGet(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrKeyNotFound {
+	if !errors.Is(err,ErrKeyNotFound){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
@@ -269,7 +274,7 @@ func TestHGet(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrFieldNotFound {
+	if !errors.Is(err,ErrFieldNotFound){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrFieldNotFound, err.Error())
 		return
 	}
@@ -284,7 +289,7 @@ func TestHGet(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrNotHashvalue {
+	if !errors.Is(err,ErrNotHashvalue){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrNotHashvalue, err.Error())
 		return
 	}
@@ -305,7 +310,7 @@ func TestHgetAll(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrKeyNotFound {
+	if !errors.Is(err,ErrKeyNotFound){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
@@ -320,7 +325,7 @@ func TestHgetAll(t *testing.T) {
 		return
 	}
 
-	if err.Error() != ErrNotHashvalue {
+	if !errors.Is(err,ErrNotHashvalue){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrNotHashvalue, err.Error())
 		return
 	}
@@ -343,7 +348,7 @@ func TestHgetAll(t *testing.T) {
 		t.Errorf("Expected Err: %s, Gotten: ERR NIL", ErrKeyNotFound)
 		return
 	}
-	if err.Error() != ErrKeyNotFound {
+	if !errors.Is(err,ErrKeyNotFound){
 		t.Errorf("Expected Err: %s, Gotten: %s", ErrKeyNotFound, err.Error())
 		return
 	}
@@ -418,7 +423,7 @@ func TestHmset(t *testing.T) {
 		t.Errorf("expected to contain data,gotten nil")
 		return
 	}
-	if err.Error() != ErrHmsetDataType {
+	if !errors.Is(err,ErrHmsetDataType){
 		t.Errorf("expected error %s,gotten: %s", ErrHmsetDataType, err.Error())
 	}
 
@@ -528,15 +533,15 @@ func TestSnapshotWithoutOpt(t *testing.T) {
 	c.Hset("user:2", "name", "jhon", 0)
 	c.Set("user:3", "raju", 3000000)
 
-	snapshot(c.(*Cache), "snapshot.data")
+	snapshot(c.(*Cache), "snapshot2.data")
 	c.Del("user:1")
 	c.Del("user:2")
 	c.Del("user:3")
-	fmt.Println(c.AllData())
 
-	decoder(c.(*Cache), "snapshot.data")
+	decoder(c.(*Cache), "snapshot2.data")
+	time.Sleep(100 * time.Millisecond)
 
-	fmt.Println(c.AllData())
+	//fmt.Println(c.AllData())
 	if !c.Exists("user:1") || !c.Exists("user:2") || !c.Exists("user:3") {
 		t.Errorf("Key does not exists, Snapshot does not take place")
 		return
@@ -577,5 +582,5 @@ func TestDecoder(t *testing.T) {
 	c.Set("u3", "lol", 0)
 	c.Set("u4", "lol", 0)
 	time.Sleep(time.Millisecond * 1000)
-	testdecoder()
+	testdecoder("snapshot.data")
 }

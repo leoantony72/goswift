@@ -54,10 +54,10 @@ func snapshot(c *Cache, fileName string) {
 }
 func decoder(c *Cache, fileName string) {
 	gob.Register(map[string]interface{}{})
-	file, err := os.Open("snapshot.data")
+	file, err := os.Open(fileName)
 	if err != nil {
 		if os.IsNotExist(err) {
-			file, err = os.Create("snapshot.data")
+			file, err = os.Create(fileName)
 			if err != nil {
 				fmt.Println("Error creating file:", err)
 				return
@@ -91,11 +91,11 @@ func decoder(c *Cache, fileName string) {
 	addToCache(data, c)
 }
 
-func testdecoder() {
+func testdecoder(filename string) {
 	gob.Register(map[string]interface{}{})
-	file, err := os.Open("snapshot.data")
+	file, err := os.Open(filename)
 	if err != nil {
-		os.Create("snapshot.data")
+		os.Create(filename)
 		return
 	}
 	defer file.Close()
